@@ -1,3 +1,3 @@
 export default function NewPage() {
-  return <div> Hey its me Amshu Pokharel</div>
+  return <div className="text-2xl text-red-500"> Hey its me Amshu Pokharel</div>
 }
