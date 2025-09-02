@@ -1,6 +1,7 @@
-import { User } from "lucide-react"
+import { Settings, User } from "lucide-react"
 import { useState } from "react"
 import toast from "react-hot-toast"
+import { Link } from "react-router"
 
 import Logo from "../assets/logo.jpg"
 import { useAuthStore } from "../store/store"
@@ -21,38 +22,65 @@ const Navbar = () => {
   }
 
   return (
-    <div className="flex items-center space-x-3">
-      <div className="w-12 h-12 m-2 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors overflow-hidden">
-        <img src={Logo} alt="ChatApp Logo" className="w-16 h-16 object-contain" />
-      </div>
-      <div className="text-xl font-bold">ChatApp</div>
+    <header className="border-b border-base-300 fixed w-full top-0 z-40 backdrop-blur-lg bg-base-100/80">
+      <div className="container mx-auto px-4 h-16">
+        <div className=" flex items-center justify-between h-full">
+          <div className="flex items-center gap-6">
+            {/* Logo + Text */}
+            <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-all">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors overflow-hidden">
+                <img src={Logo} alt="ChatApp Logo" className="w-10 h-10 object-contain" />
+              </div>
+              <h1 className="text-xl font-bold">ChatApp</h1>
+            </Link>
+          </div>
+          {/* setting  */}
+          <div className="flex item-center gap-2">
+            <Link to={"/settings"} className={`btn btn-sm gap-2 transition-colors`}>
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </Link>
+          </div>
 
-      {authUser && (
-        <div className="relative">
-          {/* Profile Icon */}
-          <button
-            className="flex items-center space-x-2"
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          >
-            <User className="w-6 h-6" />
-            <span>{authUser.name}</span>
-          </button>
-
-          {/* Dropdown */}
-          {isDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-40 bg-base-100 rounded-lg shadow-lg py-2 z-50">
+          {/* Profile Dropdown */}
+          {authUser && (
+            <div className="relative">
+              {/* Profile Button */}
               <button
-                className="w-full text-left px-4 py-2 hover:bg-base-200"
-                onClick={handleLogout}
-                disabled={isLogging}
+                className="flex items-center space-x-2 hover:opacity-80 transition"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               >
-                {isLogging ? "Logging out..." : "Logout"}
+                <User className="w-6 h-6" />
+                <span>{authUser.name}</span>
               </button>
+
+              {/* Dropdown */}
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-40 bg-base-100 rounded-lg shadow-lg py-2 z-50 flex flex-col">
+                  {/* Profile Link */}
+                  <Link
+                    to="/profile"
+                    className="w-full text-left px-4 py-2 hover:bg-base-200 flex items-center gap-2"
+                  >
+                    <User className="w-5 h-5" />
+                    <span className="hidden sm:inline">Profile</span>
+                  </Link>
+
+                  {/* Logout Button */}
+                  <button
+                    className="w-full text-left px-4 py-2 hover:bg-base-200 mt-1"
+                    onClick={handleLogout}
+                    disabled={isLogging}
+                  >
+                    {isLogging ? "Logging out..." : "Logout"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
-    </div>
+      </div>
+    </header>
   )
 }
 
