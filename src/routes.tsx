@@ -3,15 +3,31 @@
 import { createBrowserRouter } from "react-router"
 
 import App from "./App"
-import NewPage from "./pages/NewPage"
+import Layout from "./layout/layout"
+import HomePage from "./pages/HomePage"
+import LoginPage from "./pages/LoginPage"
+import RegisterPage from "./pages/RegisterPage"
 
 export const router = createBrowserRouter([
   {
-    path: "/",
-    element: <App />,
-  },
-  {
-    path: "new",
-    element: <NewPage />,
+    element: <Layout />,
+    children: [
+      {
+        path: "/",
+        element: <App />,
+      },
+      {
+        path: "login",
+        element: <LoginPage />,
+      },
+      {
+        path: "register",
+        element: <RegisterPage />,
+      },
+      {
+        path: "home",
+        element: <HomePage />,
+      },
+    ],
   },
 ])
