@@ -10,25 +10,27 @@ type AuthState = {
   isUpdatingProfile: boolean
   setIsCheckingAuth: (value: boolean) => void
 
-  register: (data: { email: string; password: string }) => Promise<void>
+  register: (data: { email: string; password: string; fullName: string }) => Promise<void>
   logOut: () => Promise<void>
+  login: (data: { email: string; password: string }) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   authUser: null,
   isRegister: false,
   isLogging: false,
+
   isCheckingAuth: true,
   isUpdatingProfile: false,
 
   setIsCheckingAuth: (value) => set({ isCheckingAuth: value }),
-
+  //
   register: async (data) => {
     set({ isRegister: true })
     const user = await registerUser(data)
     set({ authUser: user, isRegister: false })
   },
-
+  //
   logOut: async () => {
     const currentUser = get().authUser
     if (!currentUser) return
@@ -41,4 +43,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLogging: false })
     }
   },
+  //
+  login: async () => {},
 }))

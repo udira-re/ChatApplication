@@ -83,7 +83,7 @@ const RegisterPage: React.FC = () => {
             />
             <button
               type="button"
-              className="absolute inset-y-0 right-0 pr-3 mt-7 flex items-center"
+              className="absolute  right-3 top-[72%] -translate-y-1/2  flex items-center"
               onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? (

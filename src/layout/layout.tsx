@@ -17,7 +17,7 @@ export default function Layout() {
   }, [setIsCheckingAuth])
 
   useEffect(() => {
-    const publicRoutes = ["/login", "/register", "/settings"]
+    const publicRoutes = ["/login", "/register", "/settings", "/profile"]
 
     if (!isCheckingAuth && !authUser && !publicRoutes.includes(location.pathname)) {
       navigate("/login")
