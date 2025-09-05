@@ -2,12 +2,14 @@ import { yupResolver } from "@hookform/resolvers/yup"
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
+import toast from "react-hot-toast"
 import { Link } from "react-router"
 import * as yup from "yup"
 
 import Logo from "../assets/logo.jpg"
 import InputField from "../component/reuseable/InputFeild"
 import { useAuthStore } from "../store/store"
+import { handleApiError } from "../utillis/handle-api-error"
 
 // Validation schema
 const loginSchema = yup.object().shape({
@@ -32,11 +34,14 @@ export default function LoginPage() {
     resolver: yupResolver(loginSchema),
   })
 
-  const onSubmit = (data: LoginFormData) => {
-    login(data)
-    // 🔑 Call login API here
+  const onSubmit = async (data: LoginFormData) => {
+    try {
+      await login(data)
+      toast.success("Login successfully!")
+    } catch (err) {
+      handleApiError(err)
+    }
   }
-
   return (
     <div className="h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-md space-y-8 bg-base-200 p-8 rounded-2xl shadow-lg">

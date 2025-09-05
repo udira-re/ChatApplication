@@ -1,18 +1,25 @@
 import { create } from "zustand"
 
 import { logOutUser, registerUser } from "../api/auth"
-
+import { updateProfile } from "../api/profile"
 type AuthState = {
-  authUser: null | { id: string; name: string }
+  authUser: null | {
+    id: string
+    fullName: string
+    profilePic?: string
+    email: string
+    createdAt?: string
+  }
   isRegister: boolean
   isLogging: boolean
   isCheckingAuth: boolean
   isUpdatingProfile: boolean
   setIsCheckingAuth: (value: boolean) => void
 
-  register: (data: { email: string; password: string; fullName: string }) => Promise<void>
+  register: (data: { password: string; fullName: string; email: string }) => Promise<void>
   logOut: () => Promise<void>
   login: (data: { email: string; password: string }) => Promise<void>
+  updateProfile: (data: { profilePic: string }) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -44,5 +51,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   //
+
   login: async () => {},
+
+  updateProfile: async (data: { profilePic: string }) => {
+    set({ isUpdatingProfile: true })
+    try {
+      const updatedUser = await updateProfile(data)
+
+      set((state) => ({
+        authUser: state.authUser
+          ? { ...state.authUser, profilePic: updatedUser.profilePic }
+          : state.authUser,
+      }))
+    } finally {
+      set({ isUpdatingProfile: false })
+    }
+  },
 }))

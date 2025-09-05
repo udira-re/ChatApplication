@@ -34,10 +34,14 @@ const RegisterPage: React.FC = () => {
     handleSubmit,
     formState: { errors },
   } = useForm<FormData>({ resolver: yupResolver(schema) })
-  const onSubmit = (data: FormData) => {
-    registerUser(data)
-      .then(() => toast.success("Account created successfully!"))
-      .catch((err) => handleApiError(err))
+  //
+  const onSubmit = async (data: FormData) => {
+    try {
+      await registerUser(data)
+      toast.success("Account created successfully!")
+    } catch (err) {
+      handleApiError(err)
+    }
   }
   return (
     <div className="min-h-screen flex items-center justify-center bg-base-200 px-4">

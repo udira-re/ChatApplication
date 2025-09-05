@@ -4,11 +4,13 @@ import { Outlet, useNavigate, useLocation } from "react-router"
 
 import Navbar from "../component/Navbar"
 import { useAuthStore } from "../store/store"
+import { UseThemeStore } from "../store/use_theme_store"
 
 export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { authUser, isCheckingAuth, setIsCheckingAuth } = useAuthStore()
+  const { theme } = UseThemeStore()
 
   useEffect(() => {
     setTimeout(() => {
@@ -17,7 +19,7 @@ export default function Layout() {
   }, [setIsCheckingAuth])
 
   useEffect(() => {
-    const publicRoutes = ["/login", "/register", "/settings", "/profile"]
+    const publicRoutes = ["/login", "/register", "/settings", "/profile", "/home"]
 
     if (!isCheckingAuth && !authUser && !publicRoutes.includes(location.pathname)) {
       navigate("/login")
@@ -33,8 +35,13 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden overflow-x-clip">
-      <Navbar />
+    <div
+      className="flex h-screen w-full flex-col overflow-hidden overflow-x-clip"
+      data-theme={theme}
+    >
+      <div>
+        <Navbar />
+      </div>
       <div className="flex w-full flex-grow flex-col self-center overflow-y-auto overflow-x-clip px-2 py-4 md:px-5 lg:px-10 pt-20">
         <Outlet />
       </div>
