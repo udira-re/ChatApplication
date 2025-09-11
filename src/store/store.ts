@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // import { create } from "zustand"
 
 // import { loginUser, logOutUser, registerUser } from "../api/auth"
@@ -107,7 +108,7 @@ type AuthState = {
   isLogging: boolean
   isCheckingAuth: boolean
   isUpdatingProfile: boolean
-  setIsCheckingAuth: (value: boolean) => void // ✅ implemented
+  setIsCheckingAuth: (value: boolean) => void
 
   register: (data: { fullName: string; email: string; password: string }) => Promise<void>
   login: (data: { email: string; password: string }) => Promise<void>
@@ -131,39 +132,69 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setIsCheckingAuth: (value: boolean) => set({ isCheckingAuth: value }),
   socket: null,
+
+  // ✅ Register
   register: async (data) => {
     set({ isRegister: true })
     try {
-      const user = await registerUser(data)
-      set({ authUser: user })
+      const res = await registerUser(data)
+
+      // Save tokens
+      sessionStorage.setItem("accessToken", res.accessToken)
+      sessionStorage.setItem("refreshToken", res.refreshToken)
+
+      console.log("[STORE] Stored tokens after register:", {
+        accessToken: sessionStorage.getItem("accessToken"),
+        refreshToken: sessionStorage.getItem("refreshToken"),
+      })
+      // Save user
+      set({ authUser: res.user })
       get().connectSocket()
+      console.log("[STORE] Registered user set in store:", res.user)
     } finally {
       set({ isRegister: false })
     }
   },
 
+  // ✅ Login
   login: async (data) => {
     set({ isLogging: true })
     try {
-      const user = await loginUser(data)
-      set({ authUser: user })
+      const res = await loginUser(data)
+
+      sessionStorage.setItem("accessToken", res.accessToken)
+      sessionStorage.setItem("refreshToken", res.refreshToken)
+
+      console.log("[STORE] Stored tokens after login:", {
+        accessToken: sessionStorage.getItem("accessToken"),
+        refreshToken: sessionStorage.getItem("refreshToken"),
+      })
+
+      set({ authUser: res.user })
+      console.log("[STORE] Logged-in user set in store:", res.user)
+
       get().connectSocket()
     } finally {
       set({ isLogging: false })
     }
   },
 
+  // ✅ Logout
   logOut: async () => {
     const user = get().authUser
     if (!user) return
     try {
       await logOutUser({ email: user.email })
     } finally {
+      sessionStorage.removeItem("accessToken")
+      sessionStorage.removeItem("refreshToken")
       get().disconnectSocket()
       set({ authUser: null })
+      console.log("[STORE] Tokens cleared and user logged out")
     }
   },
 
+  // ✅ Update profile
   updateProfile: async (data: { profilePic: string }) => {
     set({ isUpdatingProfile: true })
     try {
@@ -175,8 +206,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  // ✅ Mock socket connect
   connectSocket: () => {
-    // console.log("🔌 Mock socket connected")
     set({ socketConnected: true })
 
     const mockUsers = ["Alice", "Bob", "Charlie", "Daisy", "Eve"]
@@ -190,8 +221,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ socketInterval: interval })
   },
 
+  // ✅ Mock socket disconnect
   disconnectSocket: () => {
-    // console.log("❌ Mock socket disconnected")
     const { socketInterval } = get()
     if (socketInterval) clearInterval(socketInterval)
     set({ socketConnected: false, onlineUsers: [], socketInterval: null })

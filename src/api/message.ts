@@ -2,18 +2,61 @@
 
 import type { User, Message } from "../store/use_chat_store"
 
+// Mock users
 const MOCK_USERS: User[] = [
   { id: "1", name: "Alice" },
   { id: "2", name: "Bob" },
   { id: "3", name: "Charlie" },
 ]
 
-const MOCK_MESSAGES: Record<string, Message[]> = {
+// Mock messages
+export const MOCK_MESSAGES: Record<string, Message[]> = {
   "1": [
+    // Alice's conversation
     {
       id: 1,
-      content: "Hello Alice",
-      text: "Hello Alice",
+      content: "Hey Alice, how was your weekend?",
+      text: "Hey Alice, how was your weekend?",
+      senderId: "2", // Bob sent
+      receiverId: "1",
+      image: "",
+      createdAt: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+    },
+    {
+      id: 2,
+      content: "Hi Bob! It was great, went hiking 🌄. How about yours?",
+      text: "Hi Bob! It was great, went hiking 🌄. How about yours?",
+      senderId: "1", // Alice replied
+      receiverId: "2",
+      image: "",
+      createdAt: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+    },
+    {
+      id: 3,
+      content: "Nice! Mine was relaxing at home. Watched a movie 🍿.",
+      text: "Nice! Mine was relaxing at home. Watched a movie 🍿.",
+      senderId: "2",
+      receiverId: "1",
+      image: "",
+      createdAt: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+    },
+    {
+      id: 4,
+      content: "Cool! What movie did you watch?",
+      text: "Cool! What movie did you watch?",
+      senderId: "1",
+      receiverId: "2",
+      image: "",
+      createdAt: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+    },
+    {
+      id: 5,
+      content: "Inception! Mind-blowing 😮",
+      text: "Inception! Mind-blowing 😮",
       senderId: "2",
       receiverId: "1",
       image: "",
@@ -21,19 +64,52 @@ const MOCK_MESSAGES: Record<string, Message[]> = {
       timestamp: new Date().toISOString(),
     },
   ],
-  "2": [
+
+  "3": [
+    // Charlie's conversation
     {
-      id: 2,
-      content: "Hey Bob",
-      text: "Hey Bob",
-      senderId: "1",
-      receiverId: "2",
+      id: 6,
+      content: "Hey Charlie, did you finish the project?",
+      text: "Hey Charlie, did you finish the project?",
+      senderId: "1", // Alice sent
+      receiverId: "3",
       image: "",
       createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString(),
     },
+    {
+      id: 7,
+      content: "Hi Alice! Almost done, just polishing the final details.",
+      text: "Hi Alice! Almost done, just polishing the final details.",
+      senderId: "3", // Charlie replied
+      receiverId: "1",
+      image: "",
+      createdAt: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+    },
+    {
+      id: 8,
+      content: "Great! Can you send it by tonight?",
+      text: "Great! Can you send it by tonight?",
+      senderId: "1",
+      receiverId: "3",
+      image: "",
+      createdAt: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+    },
+    {
+      id: 9,
+      content: "Sure! Also, attaching the chart here 📊",
+      text: "Sure! Also, attaching the chart here 📊",
+      senderId: "3",
+      receiverId: "1",
+      image: "/chart.png",
+      createdAt: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+    },
   ],
-  "3": [],
+
+  "2": [], // Bob's conversations will be dynamically updated
 }
 
 // Simulate network delay
