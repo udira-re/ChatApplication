@@ -24,7 +24,7 @@ const Navbar = () => {
     <header className="border-b border-base-300 fixed w-full top-0 z-40 backdrop-blur-lg bg-base-100/80">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo + App Name */}
-        <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-all">
+        <Link to="/home" className="flex items-center gap-3 hover:opacity-80 transition-all">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center transition-colors overflow-hidden group-hover:bg-primary/20">
             <img src={Logo} alt="ChatApp Logo" className="w-10 h-10 object-contain" />
           </div>

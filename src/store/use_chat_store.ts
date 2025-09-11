@@ -123,7 +123,6 @@ import { create } from "zustand"
 
 import { getMessagesAPI, getUsersAPI, sendMessageAPI } from "../api/message"
 import { handleApiError } from "../utillis/handle-api-error"
-// eslint-disable-next-line import/order
 import { useAuthStore } from "./store"
 
 export type Message = {
@@ -150,6 +149,7 @@ type ChatState = {
   selectedUser: User | null
   isUsersLoading: boolean
   isMessagesLoading: boolean
+  socketSubscribed: boolean
 
   getUsers: () => Promise<void>
   getMessages: (userId: string) => Promise<void>
@@ -157,6 +157,7 @@ type ChatState = {
   subscribeToMessages: () => void
   unsubscribeFromMessages: () => void
   sendMessage: (messageData: { text?: string; image?: string }) => Promise<void>
+  _socketListener?: (event: MessageEvent) => void
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -165,8 +166,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   selectedUser: null,
   isUsersLoading: false,
   isMessagesLoading: false,
+  socketSubscribed: false,
 
-  // Fetch users
   getUsers: async () => {
     set({ isUsersLoading: true })
     try {
@@ -179,7 +180,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  // Fetch messages for a selected user
   getMessages: async (userId: string) => {
     set({ isMessagesLoading: true })
     try {
@@ -193,9 +193,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   setSelectedUser: (user: User | null) => {
-    set({ selectedUser: user, messages: [] }) // clear previous messages
+    // Clear previous messages and select new user
+    set({ selectedUser: user, messages: [] })
     if (user) {
-      get().getMessages(user.id) // fetch messages immediately
+      get().getMessages(user.id)
+      get().subscribeToMessages()
+    } else {
+      get().unsubscribeFromMessages()
     }
   },
 
@@ -209,19 +213,44 @@ export const useChatStore = create<ChatState>((set, get) => ({
         text: messageData.text || "",
         image: messageData.image || "",
       })
-      set({ messages: [...messages, newMessage] })
+
+      // Prevent duplicate messages
+      if (!messages.some((msg) => msg.id === newMessage.id)) {
+        set({ messages: [...messages, newMessage] })
+      }
     } catch (err) {
       handleApiError(err)
     }
   },
 
   subscribeToMessages: () => {
-    const { selectedUser } = get()
-    if (!selectedUser) return
-    // Add your socket subscription here
+    const { selectedUser, socketSubscribed } = get()
+    const socket = useAuthStore.getState().socket
+    if (!selectedUser || !socket || socketSubscribed) return
+
+    const listener = (event: MessageEvent) => {
+      const newMessage: Message = JSON.parse(event.data)
+      if (newMessage.senderId === selectedUser.id) {
+        set((state) => {
+          if (!state.messages.some((msg) => msg.id === newMessage.id)) {
+            return { messages: [...state.messages, newMessage] }
+          }
+          return {}
+        })
+      }
+    }
+
+    // Attach listener and store it in state
+    socket.addEventListener("message", listener)
+    set({ socketSubscribed: true, _socketListener: listener })
   },
 
   unsubscribeFromMessages: () => {
-    // Add your socket unsubscribe logic here
+    const socket = useAuthStore.getState().socket
+    const listener = get()._socketListener
+    if (!socket || !listener) return
+
+    socket.removeEventListener("message", listener)
+    set({ socketSubscribed: false, _socketListener: undefined })
   },
 }))

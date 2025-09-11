@@ -115,6 +115,7 @@ type AuthState = {
   updateProfile: (data: { profilePic: string }) => Promise<void>
   connectSocket: () => void
   disconnectSocket: () => void
+  socket: WebSocket | null
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -128,8 +129,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isCheckingAuth: true,
   isUpdatingProfile: false,
 
-  setIsCheckingAuth: (value: boolean) => set({ isCheckingAuth: value }), // ✅ added
-
+  setIsCheckingAuth: (value: boolean) => set({ isCheckingAuth: value }),
+  socket: null,
   register: async (data) => {
     set({ isRegister: true })
     try {

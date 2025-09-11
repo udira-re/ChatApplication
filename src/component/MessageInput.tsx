@@ -8,8 +8,9 @@ import { handleApiError } from "../utillis/handle-api-error"
 const MessageInput: React.FC = () => {
   const [text, setText] = useState<string>("")
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [isSending, setIsSending] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const { sendMessage } = useChatStore()
+  const sendMessage = useChatStore((state) => state.sendMessage)
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -34,8 +35,9 @@ const MessageInput: React.FC = () => {
 
   const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!text.trim() && !imagePreview) return
+    if (isSending || (!text.trim() && !imagePreview)) return
 
+    setIsSending(true)
     try {
       await sendMessage({
         text: text.trim(),
@@ -48,6 +50,8 @@ const MessageInput: React.FC = () => {
       if (fileInputRef.current) fileInputRef.current.value = ""
     } catch (error) {
       handleApiError(error)
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -92,16 +96,18 @@ const MessageInput: React.FC = () => {
 
           <button
             type="button"
-            className={`hidden sm:flex btn btn-circle
-                     ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`}
+            className={`hidden sm:flex btn btn-circle transition-colors
+              ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`}
             onClick={() => fileInputRef.current?.click()}
           >
             <Image size={20} />
           </button>
         </div>
+
         <button
           type="submit"
-          className="btn btn-sm btn-circle"
+          className={`btn btn-sm btn-circle transition-colors
+            ${text.trim() || imagePreview ? "btn-primary" : "btn-disabled"}`}
           disabled={!text.trim() && !imagePreview}
         >
           <Send size={22} />
