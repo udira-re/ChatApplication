@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import toast from "react-hot-toast"
 import { Link } from "react-router"
+import { useNavigate } from "react-router"
 import * as yup from "yup"
 
 import Logo from "../assets/logo.jpg"
@@ -26,6 +27,7 @@ type LoginFormData = yup.InferType<typeof loginSchema>
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const { login, isLogging } = useAuthStore()
+  const navigate = useNavigate()
   const {
     register,
     handleSubmit,
@@ -38,6 +40,7 @@ export default function LoginPage() {
     try {
       await login(data)
       toast.success("Login successfully!")
+      navigate("/home")
     } catch (err) {
       handleApiError(err)
     }

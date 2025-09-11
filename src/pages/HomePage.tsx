@@ -1,18 +1,56 @@
+// import ChatContainer from "../component/ChatContainer"
+// import NoChatSeleted from "../component/NoChatSeleted"
+// import Sidebar from "../component/Sidebar"
+// import { useChatStore } from "../store/use_chat_store"
+
+// const HomePage = () => {
+//   const { selectedUser } = useChatStore()
+//   return (
+//     <div className="h-screen bg-base-200">
+//       <div className="flex items-center justify-center pt-20 px-4">
+//         <div className="bg-base-100 rounded-lg shadow-cl w-full max-w-6xl h-[calc(100vh-8rem)]">
+//           <div className="flex h-full rounded-lg overflow-hidden">
+//             <Sidebar />
+
+//             {!selectedUser ? <NoChatSeleted /> : <ChatContainer />}
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   )
+// }
+
+// export default HomePage
+
+import { useEffect } from "react"
+
 import ChatContainer from "../component/ChatContainer"
 import NoChatSeleted from "../component/NoChatSeleted"
 import Sidebar from "../component/Sidebar"
-import { UseChatStore } from "../store/use_chat_store"
+import { useChatStore } from "../store/use_chat_store"
 
-const HomePage = () => {
-  const { selectedUser } = UseChatStore()
+const HomePage: React.FC = () => {
+  const { selectedUser, isUsersLoading, getUsers } = useChatStore()
+
+  useEffect(() => {
+    getUsers() // fetch all users on page load
+  }, [getUsers])
+
   return (
     <div className="h-screen bg-base-200">
       <div className="flex items-center justify-center pt-20 px-4">
         <div className="bg-base-100 rounded-lg shadow-cl w-full max-w-6xl h-[calc(100vh-8rem)]">
           <div className="flex h-full rounded-lg overflow-hidden">
             <Sidebar />
-
-            {!selectedUser ? <NoChatSeleted /> : <ChatContainer />}
+            <div className="flex-1 flex items-center justify-center">
+              {isUsersLoading ? (
+                <span className="text-lg font-medium">Loading...</span>
+              ) : !selectedUser ? (
+                <NoChatSeleted />
+              ) : (
+                <ChatContainer />
+              )}
+            </div>
           </div>
         </div>
       </div>
