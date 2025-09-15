@@ -125,6 +125,8 @@ import { getMessagesAPI, getUsersAPI, sendMessageAPI } from "../api/message"
 import { handleApiError } from "../utillis/handle-api-error"
 import { useAuthStore } from "./store"
 
+export type MessageStatus = "sent" | "delivered" | "read" | "failed"
+
 export type Message = {
   id: number
   content: string
@@ -134,6 +136,7 @@ export type Message = {
   createdAt: string
   image?: string
   text: string
+  status: MessageStatus
 }
 
 export type User = {
@@ -193,7 +196,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   setSelectedUser: (user: User | null) => {
-    // Clear previous messages and select new user
     set({ selectedUser: user, messages: [] })
     if (user) {
       get().getMessages(user.id)
@@ -208,17 +210,41 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const authUser = useAuthStore.getState().authUser
     if (!selectedUser || !authUser) return
 
+    // 1. Optimistic "sent" message
+    const tempMessage: Message = {
+      id: Date.now(), // temp ID
+      content: messageData.text || "",
+      text: messageData.text || "",
+      image: messageData.image || "",
+      senderId: authUser.id,
+      receiverId: selectedUser.id,
+      timestamp: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      status: "sent",
+    }
+
+    set({ messages: [...messages, tempMessage] })
+
     try {
+      // 2. Send to backend
       const newMessage = await sendMessageAPI(selectedUser.id, {
         text: messageData.text || "",
         image: messageData.image || "",
       })
 
-      // Prevent duplicate messages
-      if (!messages.some((msg) => msg.id === newMessage.id)) {
-        set({ messages: [...messages, newMessage] })
-      }
+      // 3. Update with backend response → delivered
+      set({
+        messages: get().messages.map((msg) =>
+          msg.id === tempMessage.id ? { ...newMessage, status: "delivered" } : msg
+        ),
+      })
     } catch (err) {
+      // 4. Mark as failed
+      set({
+        messages: get().messages.map((msg) =>
+          msg.id === tempMessage.id ? { ...msg, status: "failed" } : msg
+        ),
+      })
       handleApiError(err)
     }
   },
@@ -229,18 +255,30 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!selectedUser || !socket || socketSubscribed) return
 
     const listener = (event: MessageEvent) => {
-      const newMessage: Message = JSON.parse(event.data)
-      if (newMessage.senderId === selectedUser.id) {
+      const incoming = JSON.parse(event.data)
+
+      // Case 1: new message
+      if (incoming.senderId === selectedUser.id && incoming.content) {
         set((state) => {
-          if (!state.messages.some((msg) => msg.id === newMessage.id)) {
-            return { messages: [...state.messages, newMessage] }
+          if (!state.messages.some((msg) => msg.id === incoming.id)) {
+            return {
+              messages: [...state.messages, { ...incoming, status: "delivered" }],
+            }
           }
           return {}
         })
       }
+
+      // Case 2: read receipt
+      if (incoming.type === "read") {
+        set((state) => ({
+          messages: state.messages.map((msg) =>
+            msg.id === incoming.messageId ? { ...msg, status: "read" } : msg
+          ),
+        }))
+      }
     }
 
-    // Attach listener and store it in state
     socket.addEventListener("message", listener)
     set({ socketSubscribed: true, _socketListener: listener })
   },

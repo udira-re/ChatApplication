@@ -33,6 +33,27 @@ const MessageInput: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
+  // const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault()
+  //   if (isSending || (!text.trim() && !imagePreview)) return
+
+  //   setIsSending(true)
+  //   try {
+  //     await sendMessage({
+  //       text: text.trim(),
+  //       image: imagePreview ?? undefined,
+  //     })
+
+  //     // Clear form
+  //     setText("")
+  //     setImagePreview(null)
+  //     if (fileInputRef.current) fileInputRef.current.value = ""
+  //   } catch (error) {
+  //     handleApiError(error)
+  //   } finally {
+  //     setIsSending(false)
+  //   }
+  // }
   const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isSending || (!text.trim() && !imagePreview)) return
@@ -42,6 +63,7 @@ const MessageInput: React.FC = () => {
       await sendMessage({
         text: text.trim(),
         image: imagePreview ?? undefined,
+        // status is now handled by store (optimistic -> "sent")
       })
 
       // Clear form
@@ -54,7 +76,6 @@ const MessageInput: React.FC = () => {
       setIsSending(false)
     }
   }
-
   return (
     <div className="p-4 w-full">
       {imagePreview && (

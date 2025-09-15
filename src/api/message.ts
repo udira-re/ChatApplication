@@ -12,7 +12,7 @@ const MOCK_USERS: User[] = [
 // Mock messages
 export const MOCK_MESSAGES: Record<string, Message[]> = {
   "1": [
-    // Alice's conversation
+    // Alice's conversation with Bob
     {
       id: 1,
       content: "Hey Alice, how was your weekend?",
@@ -22,6 +22,7 @@ export const MOCK_MESSAGES: Record<string, Message[]> = {
       image: "",
       createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString(),
+      status: "delivered",
     },
     {
       id: 2,
@@ -32,6 +33,7 @@ export const MOCK_MESSAGES: Record<string, Message[]> = {
       image: "",
       createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString(),
+      status: "read",
     },
     {
       id: 3,
@@ -42,6 +44,7 @@ export const MOCK_MESSAGES: Record<string, Message[]> = {
       image: "",
       createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString(),
+      status: "delivered",
     },
     {
       id: 4,
@@ -52,6 +55,7 @@ export const MOCK_MESSAGES: Record<string, Message[]> = {
       image: "",
       createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString(),
+      status: "read",
     },
     {
       id: 5,
@@ -62,11 +66,12 @@ export const MOCK_MESSAGES: Record<string, Message[]> = {
       image: "",
       createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString(),
+      status: "delivered",
     },
   ],
 
   "3": [
-    // Charlie's conversation
+    // Alice's conversation with Charlie
     {
       id: 6,
       content: "Hey Charlie, did you finish the project?",
@@ -76,6 +81,7 @@ export const MOCK_MESSAGES: Record<string, Message[]> = {
       image: "",
       createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString(),
+      status: "sent",
     },
     {
       id: 7,
@@ -86,6 +92,7 @@ export const MOCK_MESSAGES: Record<string, Message[]> = {
       image: "",
       createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString(),
+      status: "delivered",
     },
     {
       id: 8,
@@ -96,6 +103,7 @@ export const MOCK_MESSAGES: Record<string, Message[]> = {
       image: "",
       createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString(),
+      status: "read",
     },
     {
       id: 9,
@@ -106,6 +114,18 @@ export const MOCK_MESSAGES: Record<string, Message[]> = {
       image: "/chart.png",
       createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString(),
+      status: "delivered",
+    },
+    {
+      id: 10,
+      content: "I hope this chart will be best 📊",
+      text: "I hope this chart will be best 📊",
+      senderId: "3",
+      receiverId: "1",
+      image: "/chart.png",
+      createdAt: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+      status: "delivered",
     },
   ],
 
@@ -141,6 +161,7 @@ export const sendMessageAPI = async (
     image: messageData.image || "",
     createdAt: new Date().toISOString(),
     timestamp: new Date().toISOString(),
+    status: "sent",
   }
 
   if (!MOCK_MESSAGES[receiverId]) MOCK_MESSAGES[receiverId] = []
