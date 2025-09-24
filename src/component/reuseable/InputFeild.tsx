@@ -1,43 +1,78 @@
-import React, { type FC, type ReactNode } from "react"
+import classNames from "classnames" // ✅ import classNames
+import { Eye, EyeOff } from "lucide-react"
+import React, { useState } from "react"
+import { useFormContext, type FieldValues, get, type FieldPath } from "react-hook-form"
 
-type InputFieldProps = {
+export type TFormInputType = "text" | "number" | "password"
+
+type IFormInputProps<T extends FieldValues> = {
+  name: FieldPath<T>
   label: string
-  type?: string
+  type?: TFormInputType
   placeholder?: string
-  icon?: ReactNode
-  error?: string
-  inputProps?: React.InputHTMLAttributes<HTMLInputElement>
+  required?: boolean
+  hideBottomMargin?: boolean
+  autoComplete?: string
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
+  value?: string
 }
 
-const InputField: FC<InputFieldProps> = ({
-  label,
-  type = "text",
-  placeholder,
-  icon,
-  error,
-  inputProps,
-}) => {
+export default function FormInput<T extends FieldValues>(props: IFormInputProps<T>) {
+  const {
+    watch,
+    register,
+    formState: { errors },
+  } = useFormContext<T>()
+
+  const currentValue = watch(props.name)
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+
+  const togglePassword = () => setIsPasswordVisible(!isPasswordVisible)
+
+  const inputType =
+    props.type === "password" ? (isPasswordVisible ? "text" : "password") : props.type
+
+  const errorMessage = get(errors, props.name)?.message
+
   return (
-    <div className="form-control">
-      <label className="label">
-        <span className="label-text font-medium">{label}</span>
+    <fieldset>
+      <label htmlFor={props.name} className="ml-[1px] block text-sm text-gray-700">
+        <span>{props.label}</span>
+        {props.required && <span className="ml-1 text-red-500">*</span>}
       </label>
-      <div className="relative mt-1">
-        {icon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-            {icon}
+
+      <div className="relative">
+        <input
+          {...register(props.name)}
+          id={props.name}
+          type={inputType}
+          className={classNames(
+            "h-10 w-full rounded-md border bg-white pl-2 text-sm placeholder:text-gray-400",
+            props.type === "password" && "pr-10",
+            errorMessage
+              ? "border-red-500 focus:border-red-500 focus:ring-red-500/50"
+              : "border-stone-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+          )}
+          placeholder={props.placeholder}
+          autoComplete={props.autoComplete}
+          {...(props.onChange ? { onChange: props.onChange } : {})}
+          value={props.value ?? currentValue}
+        />
+
+        {props.type === "password" && currentValue && (
+          <div className="absolute right-2 top-0 flex h-full items-center text-gray-700">
+            {isPasswordVisible ? (
+              <Eye size={20} className="cursor-pointer" onClick={togglePassword} />
+            ) : (
+              <EyeOff size={20} className="cursor-pointer" onClick={togglePassword} />
+            )}
           </div>
         )}
-        <input
-          type={type}
-          placeholder={placeholder}
-          className={`input input-bordered w-full pl-10 appearance-none ${error ? "input-error" : ""}`}
-          {...inputProps}
-        />
       </div>
-      {error && <p className="text-error text-sm mt-2">{error}</p>}
-    </div>
+
+      {errorMessage && (
+        <p className="ml-[1px] mt-[2px] text-xs text-red-500">{errorMessage.toString()}</p>
+      )}
+    </fieldset>
   )
 }
-
-export default InputField

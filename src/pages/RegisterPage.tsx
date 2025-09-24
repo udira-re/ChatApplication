@@ -1,9 +1,8 @@
 import { yupResolver } from "@hookform/resolvers/yup"
-import { Mail, User, Lock, EyeOff, Eye } from "lucide-react"
-import React, { useState } from "react"
-import { useForm } from "react-hook-form"
+import React from "react"
+import { useForm, FormProvider } from "react-hook-form"
 import toast from "react-hot-toast"
-import { Link } from "react-router"
+import { useNavigate, Link } from "react-router-dom"
 import * as yup from "yup"
 
 import Logo from "../assets/logo.jpg"
@@ -15,6 +14,7 @@ import { handleApiError } from "../utillis/handle-api-error"
 // Yup schema
 const schema = yup
   .object({
+    username: yup.string().required("User Name is required"),
     fullName: yup.string().required("Full Name is required"),
     email: yup.string().trim().email("Invalid email format").required("Email is required"),
     password: yup
@@ -27,30 +27,30 @@ const schema = yup
 type FormData = yup.InferType<typeof schema>
 
 const RegisterPage: React.FC = () => {
-  const [showPassword, setShowPassword] = useState(false)
+  const navigate = useNavigate()
   const { register: registerUser, isRegister } = useAuthStore()
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormData>({ resolver: yupResolver(schema) })
-  //
+
+  // ✅ useForm and keep the full methods object
+  const methods = useForm<FormData>({ resolver: yupResolver(schema) })
+  const { reset } = methods
+
   const onSubmit = async (data: FormData) => {
     try {
       await registerUser(data)
       toast.success("Account created successfully!")
+      reset()
+      navigate("/login")
     } catch (err) {
       handleApiError(err)
     }
   }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-base-200 px-4">
       <div className="w-full max-w-md bg-base-100 rounded-2xl shadow-xl p-8 space-y-6">
+        {/* Logo */}
         <div className="text-center">
           <div className="flex flex-col items-center gap-2 group">
-            {/* <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-              <MessageSquare className="size-7 text-primary" />
-            </div> */}
             <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors overflow-hidden">
               <img src={Logo} alt="ChatApp Logo" className="w-16 h-16 object-contain" />
             </div>
@@ -59,49 +59,46 @@ const RegisterPage: React.FC = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          <InputField
-            label="Full Name"
-            placeholder="Enter your full name"
-            icon={<User className="size-5 text-base-content/40" />}
-            error={errors.fullName?.message}
-            inputProps={register("fullName")}
-          />
-
-          <InputField
-            label="Email"
-            placeholder="Enter your email"
-            icon={<Mail className="size-5 text-base-content/40" />}
-            error={errors.email?.message}
-            inputProps={register("email")}
-          />
-
-          <div className="relative">
+        {/* Form */}
+        <FormProvider {...methods}>
+          <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-5">
             <InputField
-              label="Password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
-              icon={<Lock className="size-5 text-base-content/40" />}
-              error={errors.password?.message}
-              inputProps={{ ...register("password"), autoComplete: "new-password" }}
+              required
+              type="text"
+              label="UserName"
+              name="username"
+              placeholder="Enter your user name"
             />
-            <button
-              type="button"
-              className="absolute  right-3 top-[72%] -translate-y-1/2  flex items-center"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? (
-                <Eye className="size-5 text-base-content/40" />
-              ) : (
-                <EyeOff className="size-5 text-base-content/40" />
-              )}
-            </button>
-          </div>
+            <InputField
+              required
+              type="text"
+              label="Email"
+              name="email"
+              placeholder="Enter your email"
+            />
+            <InputField
+              required
+              type="text"
+              label="Full Name"
+              name="fullName"
+              placeholder="Enter your full name"
+            />
+            <div className="relative">
+              <InputField
+                required
+                type="password"
+                label="Password"
+                placeholder="Enter your password"
+                name="password"
+                autoComplete="new-password"
+              />
+            </div>
 
-          <Button type="submit" isLoading={isRegister} className="btn-primary">
-            Create Account
-          </Button>
-        </form>
+            <Button type="submit" isLoading={isRegister} className="btn-primary">
+              Create Account
+            </Button>
+          </form>
+        </FormProvider>
 
         <p className="text-center text-base text-base-content/60">
           Already have an account?{" "}

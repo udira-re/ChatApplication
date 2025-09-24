@@ -1,14 +1,14 @@
 import { StrictMode } from "react"
+// main.tsx
 import { createRoot } from "react-dom/client"
 import { Toaster } from "react-hot-toast"
-import { RouterProvider } from "react-router"
+import { RouterProvider } from "react-router-dom" // ✅ correct
 
 import "./index.css"
 import { router } from "./routes"
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {/* Toasts are global, outside the router */}
     <RouterProvider router={router} />
     <Toaster
       position="top-right"

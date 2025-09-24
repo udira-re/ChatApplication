@@ -1,10 +1,8 @@
 import { yupResolver } from "@hookform/resolvers/yup"
-import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react"
-import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { Loader2 } from "lucide-react"
+import { FormProvider, useForm } from "react-hook-form"
 import toast from "react-hot-toast"
-import { Link } from "react-router"
-import { useNavigate } from "react-router"
+import { useNavigate, Link } from "react-router-dom"
 import * as yup from "yup"
 
 import Logo from "../assets/logo.jpg"
@@ -18,21 +16,17 @@ const loginSchema = yup.object().shape({
   password: yup
     .string()
     .required("Password is required")
-    // eslint-disable-next-line no-magic-numbers
     .min(8, "Password must be at least 8 characters"),
 })
 
 type LoginFormData = yup.InferType<typeof loginSchema>
 
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false)
   const { login, isLogging } = useAuthStore()
   const navigate = useNavigate()
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>({
+
+  // ✅ Use useForm and keep the full methods object
+  const methods = useForm<LoginFormData>({
     resolver: yupResolver(loginSchema),
   })
 
@@ -45,6 +39,7 @@ export default function LoginPage() {
       handleApiError(err)
     }
   }
+
   return (
     <div className="h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-md space-y-8 bg-base-200 p-8 rounded-2xl shadow-lg">
@@ -58,53 +53,38 @@ export default function LoginPage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          <InputField
-            label="Email"
-            placeholder="Enter your email"
-            icon={<Mail className="size-5 text-base-content/40" />}
-            error={errors.email?.message}
-            inputProps={register("email")}
-          />
+        <FormProvider {...methods}>
+          <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-5">
+            <InputField required type="text" label="Email" name="email" />
 
-          <div className="relative">
-            <InputField
-              label="Password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
-              icon={<Lock className="size-5 text-base-content/40" />}
-              error={errors.password?.message}
-              inputProps={{ ...register("password"), autoComplete: "new-password" }}
-            />
+            <div className="relative">
+              <InputField
+                required
+                type="password"
+                label="Password"
+                name="password"
+                autoComplete="current-password"
+              />
+            </div>
+
             <button
-              type="button"
-              className="absolute  right-3 top-[72%] -translate-y-1/2  flex items-center"
-              onClick={() => setShowPassword(!showPassword)}
+              type="submit"
+              className="w-full py-2 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition flex items-center justify-center gap-2"
+              disabled={isLogging}
             >
-              {showPassword ? (
-                <Eye className="size-5 text-base-content/40" />
+              {isLogging ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Loading...
+                </>
               ) : (
-                <EyeOff className="size-5 text-base-content/40" />
+                "Sign in"
               )}
             </button>
-          </div>
+          </form>
+        </FormProvider>
 
-          <button
-            type="submit"
-            className="w-full py-2 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition flex items-center justify-center gap-2"
-            disabled={isLogging}
-          >
-            {isLogging ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Loading...
-              </>
-            ) : (
-              "Sign in"
-            )}
-          </button>
-        </form>
-        <div className="text-center ">
+        <div className="text-center">
           <p className="text-base-content/60">
             Don&apos;t have an account?{" "}
             <Link to="/register" className="link link-primary">

@@ -1,7 +1,7 @@
 import { Settings, User } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
-import { Link } from "react-router"
+import { Link } from "react-router-dom"
 
 import Logo from "../assets/logo.jpg"
 import { useAuthStore } from "../store/store"
@@ -9,16 +9,35 @@ import { useAuthStore } from "../store/store"
 const Navbar = () => {
   const { authUser, isLogging, logOut } = useAuthStore()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement | null>(null)
 
   const handleLogout = async () => {
     if (!authUser) return
     try {
       await logOut()
       toast.success("Logged out successfully!")
+      setIsDropdownOpen(false) // close after logout
     } catch (err) {
       toast.error((err as Error).message || "Failed to log out")
     }
   }
+
+  // 🔹 Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false)
+      }
+    }
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [isDropdownOpen])
 
   return (
     <header className="border-b border-base-300 fixed w-full top-0 z-40 backdrop-blur-lg bg-base-100/80">
@@ -41,13 +60,13 @@ const Navbar = () => {
 
           {/* Profile Dropdown */}
           {authUser && (
-            <div className="relative">
+            <div className="relative" ref={dropdownRef}>
               <button
                 className="flex items-center space-x-2 hover:opacity-80 transition"
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               >
                 <User className="w-6 h-6" />
-                <span>{authUser.fullName}</span>
+                <span>{authUser.username}</span>
               </button>
 
               {isDropdownOpen && (
@@ -55,6 +74,7 @@ const Navbar = () => {
                   <Link
                     to="/profile"
                     className="w-full text-left px-4 py-2 hover:bg-base-200 flex items-center gap-2"
+                    onClick={() => setIsDropdownOpen(false)}
                   >
                     <User className="w-5 h-5" />
                     <span className="hidden sm:inline">Profile</span>
