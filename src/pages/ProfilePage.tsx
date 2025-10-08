@@ -1,4 +1,3 @@
-// Profile.tsx
 import { yupResolver } from "@hookform/resolvers/yup"
 import { Camera, MessageSquare } from "lucide-react"
 import { useState, useEffect } from "react"
@@ -27,13 +26,13 @@ const schema = yup
     fullName: yup
       .string()
       .required("Full name is required")
-      .matches(/^[a-zA-Z\s]+$/),
-    email: yup.string().email("Invalid email").required(),
+      .matches(/^[a-zA-Z\s]+$/, "Full name must contain only letters and spaces"),
+    email: yup.string().email("Invalid email").required("Email is required"),
     phone: yup
       .string()
-      .required()
-      .matches(/^\d{10}$/),
-    bio: yup.string().required().max(200),
+      .required("Phone number is required")
+      .matches(/^\d{10}$/, "Phone must be 10 digits"),
+    bio: yup.string().required("Bio is required").max(200, "Max 200 characters"),
     notifications: yup.boolean().required(),
     avatar: yup
       .mixed<File>()
@@ -52,8 +51,9 @@ const schema = yup
   .required()
 
 const Profile: React.FC = () => {
-  const { authUser, profile, isUpdatingProfile, updateProfile, fetchProfile } = useAuthStore()
+  const { authUser, profile, fetchProfile, updateProfile, isUpdatingProfile } = useAuthStore()
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [refetchTrigger] = useState(false)
 
   const methods = useForm<ProfileFormValues>({
     resolver: yupResolver(schema),
@@ -71,38 +71,27 @@ const Profile: React.FC = () => {
   const { handleSubmit, reset, formState, register, setValue } = methods
   const { errors, isDirty } = formState
 
-  // Fetch profile data and populate form
+  // Fetch profile on mount or after update
   useEffect(() => {
-    let isMounted = true
     fetchProfile()
-      .then(() => {
-        if (!isMounted) return
+      .then((data) => {
+        if (!data?.user) return
+
         reset({
-          username: authUser?.username || "",
-          fullName: authUser?.fullName || "",
-          email: authUser?.email || "",
-          phone: profile?.phone || "",
-          bio: profile?.bio || "",
-          notifications: profile?.notifications ?? true,
+          username: data.user.username,
+          fullName: data.user.fullName,
+          email: data.user.email,
+          phone: data.phone,
+          bio: data.bio,
+          notifications: data.notifications ?? true,
           avatar: null,
         })
-        setPreviewImage(profile?.avatar || null)
+
+        // eslint-disable-next-line promise/always-return
+        setPreviewImage(data.avatar || null)
       })
       .catch((err) => handleApiError(err))
-    return () => {
-      isMounted = false
-    }
-  }, [
-    fetchProfile,
-    reset,
-    authUser?.username,
-    authUser?.fullName,
-    authUser?.email,
-    profile?.phone,
-    profile?.bio,
-    profile?.avatar,
-    profile?.notifications,
-  ])
+  }, [reset, refetchTrigger, fetchProfile])
 
   // Handle image preview
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,7 +101,7 @@ const Profile: React.FC = () => {
     setValue("avatar", file, { shouldDirty: true })
   }
 
-  // ✅ Typed onSubmit
+  // Handle form submit
   const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
     try {
       const formData = new FormData()
@@ -124,10 +113,26 @@ const Profile: React.FC = () => {
       formData.append("notifications", data.notifications ? "true" : "false")
       if (data.avatar) formData.append("avatar", data.avatar)
 
-      await updateProfile(formData) // store expects FormData
-      toast.success("Profile updated successfully!")
-      reset({ ...data, avatar: null })
-      if (data.avatar) setPreviewImage(URL.createObjectURL(data.avatar))
+      const updatedProfile = await updateProfile(formData)
+      // console.log("Update profile response:", updatedProfile)
+
+      if (updatedProfile) {
+        toast.success("Profile updated successfully!")
+
+        // Reset form with updated values
+        reset({
+          username: updatedProfile.user.username,
+          fullName: updatedProfile.user.fullName,
+          email: updatedProfile.user.email,
+          phone: updatedProfile.phone,
+          bio: updatedProfile.bio,
+          notifications: updatedProfile.notifications ?? true,
+          avatar: null,
+        })
+
+        // Set preview image using updated avatar URL
+        setPreviewImage(updatedProfile.avatar || previewImage)
+      }
     } catch (err) {
       handleApiError(err)
     }
@@ -138,22 +143,17 @@ const Profile: React.FC = () => {
       <div className="max-w-2xl mx-auto p-4 py-8">
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)} className="bg-base-300 rounded-xl p-6 space-y-8">
-            {/* Header */}
             <div className="text-center">
-              <h1 className="text-2xl font-semibold">{authUser?.username || "Profile"}</h1>
+              <h1 className="text-2xl font-semibold">{authUser?.username ?? "Profile"}</h1>
               <p className="mt-2 text-gray-500">Your profile information</p>
             </div>
 
-            {/* Profile Picture */}
+            {/* Avatar */}
             <div className="flex flex-col items-center gap-4">
               <div className="relative">
                 <div className="w-32 h-32 rounded-full border-4 overflow-hidden flex items-center justify-center bg-gray-200">
-                  {previewImage || profile?.avatar ? (
-                    <img
-                      src={previewImage || profile?.avatar}
-                      alt="Profile"
-                      className="w-32 h-32 object-cover"
-                    />
+                  {previewImage ? (
+                    <img src={previewImage} alt="Profile" className="w-32 h-32 object-cover" />
                   ) : (
                     <span className="text-gray-500 font-semibold">Profile</span>
                   )}
@@ -224,7 +224,7 @@ const Profile: React.FC = () => {
               </button>
             </div>
 
-            {/* Account Information */}
+            {/* Account Info */}
             <div className="mt-6 p-6 bg-base-300 rounded-xl">
               <div className="text-lg font-medium mb-4">Account Information</div>
               <div className="space-y-3 text-sm">

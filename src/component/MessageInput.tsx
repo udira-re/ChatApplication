@@ -6,7 +6,7 @@ import { useChatStore } from "../store/use_chat_store"
 import { handleApiError } from "../utillis/handle-api-error"
 
 const MessageInput: React.FC = () => {
-  const [text, setText] = useState<string>("")
+  const [text, setText] = useState("")
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isSending, setIsSending] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -22,9 +22,7 @@ const MessageInput: React.FC = () => {
     }
 
     const reader = new FileReader()
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string)
-    }
+    reader.onloadend = () => setImagePreview(reader.result as string)
     reader.readAsDataURL(file)
   }
 
@@ -33,40 +31,13 @@ const MessageInput: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
-  // const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
-  //   e.preventDefault()
-  //   if (isSending || (!text.trim() && !imagePreview)) return
-
-  //   setIsSending(true)
-  //   try {
-  //     await sendMessage({
-  //       text: text.trim(),
-  //       image: imagePreview ?? undefined,
-  //     })
-
-  //     // Clear form
-  //     setText("")
-  //     setImagePreview(null)
-  //     if (fileInputRef.current) fileInputRef.current.value = ""
-  //   } catch (error) {
-  //     handleApiError(error)
-  //   } finally {
-  //     setIsSending(false)
-  //   }
-  // }
   const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isSending || (!text.trim() && !imagePreview)) return
 
     setIsSending(true)
     try {
-      await sendMessage({
-        text: text.trim(),
-        image: imagePreview ?? undefined,
-        // status is now handled by store (optimistic -> "sent")
-      })
-
-      // Clear form
+      await sendMessage({ text: text.trim(), image: imagePreview ?? undefined })
       setText("")
       setImagePreview(null)
       if (fileInputRef.current) fileInputRef.current.value = ""
@@ -76,6 +47,7 @@ const MessageInput: React.FC = () => {
       setIsSending(false)
     }
   }
+
   return (
     <div className="p-4 w-full">
       {imagePreview && (
@@ -87,10 +59,9 @@ const MessageInput: React.FC = () => {
               className="w-20 h-20 object-cover rounded-lg border border-zinc-700"
             />
             <button
-              onClick={removeImage}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300
-              flex items-center justify-center"
               type="button"
+              onClick={removeImage}
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300 flex items-center justify-center"
             >
               <X className="size-3" />
             </button>
@@ -114,11 +85,11 @@ const MessageInput: React.FC = () => {
             ref={fileInputRef}
             onChange={handleImageChange}
           />
-
           <button
             type="button"
-            className={`hidden sm:flex btn btn-circle transition-colors
-              ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`}
+            className={`hidden sm:flex btn btn-circle transition-colors ${
+              imagePreview ? "text-emerald-500" : "text-zinc-400"
+            }`}
             onClick={() => fileInputRef.current?.click()}
           >
             <Image size={20} />
@@ -127,8 +98,9 @@ const MessageInput: React.FC = () => {
 
         <button
           type="submit"
-          className={`btn btn-sm btn-circle transition-colors
-            ${text.trim() || imagePreview ? "btn-primary" : "btn-disabled"}`}
+          className={`btn btn-sm btn-circle transition-colors ${
+            text.trim() || imagePreview ? "btn-primary" : "btn-disabled"
+          }`}
           disabled={!text.trim() && !imagePreview}
         >
           <Send size={22} />

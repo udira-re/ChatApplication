@@ -24,7 +24,7 @@ export default function FormInput<T extends FieldValues>(props: IFormInputProps<
     formState: { errors },
   } = useFormContext<T>()
 
-  const currentValue = watch(props.name)
+  const currentValue = watch(props.name) ?? ""
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 
   const togglePassword = () => setIsPasswordVisible(!isPasswordVisible)
@@ -47,7 +47,7 @@ export default function FormInput<T extends FieldValues>(props: IFormInputProps<
           id={props.name}
           type={inputType}
           className={classNames(
-            "h-10 w-full rounded-md border bg-white pl-2 text-sm placeholder:text-gray-400",
+            "h-10 w-full rounded-md border bg-gray-400 pl-2 text-sm placeholder:text-gray-400",
             props.type === "password" && "pr-10",
             errorMessage
               ? "border-red-500 focus:border-red-500 focus:ring-red-500/50"

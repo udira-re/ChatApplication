@@ -20,30 +20,38 @@ const MessageStatusIcon = ({ status }: { status: Message["status"] }) => {
   }
 }
 
-export default function MessageItem({ message }: { message: Message }) {
+type Props = {
+  message: Message & { avatar?: string } // optional avatar for sender
+}
+
+export default function MessageItem({ message }: Props) {
   const authUser = useAuthStore.getState().authUser
+  const profile = useAuthStore.getState().profile
   const isMe = message.senderId === authUser?.id
+
+  const senderAvatar = isMe ? profile?.avatar || "/avatar.png" : message.avatar || "/avatar.png"
 
   return (
     <div className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
       {!isMe && (
         <div className="chat-image avatar">
           <div className="w-10 h-10 rounded-full border overflow-hidden">
-            <img
-              src={
-                message.senderId !== authUser?.id
-                  ? message.senderId
-                  : authUser?.profilePic || "/avatar.png"
-              }
-              alt="profile pic"
-            />
+            <img src={senderAvatar} alt="profile pic" />
           </div>
         </div>
       )}
 
-      <div className={`chat-bubble flex flex-col max-w-xs break-words p-2 rounded-lg `}>
-        {message.image && (
-          <img src={message.image} alt="Attachment" className="sm:max-w-[200px] rounded-md mb-2" />
+      <div
+        className={`chat-bubble flex flex-col max-w-xs break-words p-2 rounded-lg ${
+          isMe ? "bg-blue-100 text-right" : "bg-gray-100"
+        }`}
+      >
+        {message?.avatar && (
+          <img
+            src={message?.avatar}
+            alt="Attachment"
+            className="sm:max-w-[200px] rounded-md mb-2"
+          />
         )}
         {message.text && <p>{message.text}</p>}
 
@@ -56,7 +64,7 @@ export default function MessageItem({ message }: { message: Message }) {
       {isMe && (
         <div className="chat-image avatar">
           <div className="w-10 h-10 rounded-full border overflow-hidden">
-            <img src={authUser?.profilePic || "/avatar.png"} alt="profile pic" />
+            <img src={profile?.avatar || "/avatar.png"} alt="profile pic" />
           </div>
         </div>
       )}

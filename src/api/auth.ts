@@ -1,13 +1,13 @@
 import api from "./api"
 
 // Add interceptor to attach token automatically
-api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem("accessToken")
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+// api.interceptors.request.use((config) => {
+//   const token = sessionStorage.getItem("accessToken")
+//   if (token) {
+//     config.headers.Authorization = `Bearer ${token}`
+//   }
+//   return config
+// })
 
 // Types
 export type AuthResponse = {
