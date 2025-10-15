@@ -23,6 +23,7 @@ type Friend = {
   _id: string
   fullName: string
   email: string
+  userName: string
 }
 
 const FriendListPage: React.FC = () => {
@@ -116,8 +117,10 @@ const FriendListPage: React.FC = () => {
   // Open chat with friend
   const handleMessageClick = (friend: Friend) => {
     chatStore.setSelectedUser({
-      id: friend._id,
-      name: friend.fullName,
+      _id: friend._id,
+      fullName: friend.fullName,
+      email: friend.email || "",
+      username: friend.userName,
     })
   }
 

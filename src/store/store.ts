@@ -111,7 +111,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const res = await registerUser(data)
       sessionStorage.setItem("accessToken", res.accessToken)
       sessionStorage.setItem("refreshToken", res.refreshToken)
-      get().setAuthUser(res.user)
+
+      const user: AuthUser = {
+        _id: res.user._id || res.user._id,
+        username: res.user.username,
+        fullName: res.user.fullName,
+        email: res.user.email,
+      }
+
+      get().setAuthUser(user)
       get().connectSocket()
     } catch (err) {
       handleApiError(err)
@@ -127,7 +135,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const res = await loginUser(data)
       sessionStorage.setItem("accessToken", res.accessToken)
       sessionStorage.setItem("refreshToken", res.refreshToken)
-      get().setAuthUser(res.user)
+
+      const user: AuthUser = {
+        _id: res.user._id || res.user._id,
+        username: res.user.username,
+        fullName: res.user.fullName,
+        email: res.user.email,
+      }
+
+      get().setAuthUser(user)
       get().connectSocket()
     } catch (err) {
       handleApiError(err)
@@ -156,14 +172,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isCheckingAuth: true })
     try {
       const res = await getUserProfile()
-
-      if (!res.success || !res.data?.user || !res.data) {
+      if (!res.success || !res.data?.user) {
         toast.error("Profile data incomplete")
         return null
       }
 
       const user: AuthUser = {
-        _id: res?.data?.user._id,
+        _id: res.data.user._id || res.data.user.id,
         username: res.data.user.username,
         fullName: res.data.user.fullName,
         email: res.data.user.email,
@@ -195,37 +210,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   updateProfile: async (formData: FormData): Promise<UserData | null> => {
     set({ isUpdatingProfile: true })
-
     try {
       const updated: UpdateProfileResponse = await apiUpdateProfile(formData)
+      if (!updated?.data?.user) return null
 
-      if (updated?.data?.user && updated?.data) {
-        const user: AuthUser = {
-          _id: updated.data.user._id,
-          username: updated.data.user.username,
-          fullName: updated.data.user.fullName,
-          email: updated.data.user.email,
-          notifications: updated.data.user.notifications,
-        }
-
-        const profile: ProfileUser = {
-          phone: updated.data.phone,
-          bio: updated.data.bio,
-          avatar: updated.data.avatar,
-          status: updated.data.status,
-          createdAt: updated.data.createdAt,
-          updatedAt: updated.data.updatedAt,
-          friendRequestsSent: updated.data.friendRequestsSent || [],
-          friendRequestsReceived: updated.data.friendRequestsReceived || [],
-        }
-
-        set({ profile })
-        get().setAuthUser(user)
-
-        return { user, profile }
+      const user: AuthUser = {
+        _id: updated.data.user._id || updated.data.user._id,
+        username: updated.data.user.username,
+        fullName: updated.data.user.fullName,
+        email: updated.data.user.email,
+        notifications: updated.data.user.notifications,
       }
 
-      return null
+      const profile: ProfileUser = {
+        phone: updated.data.phone,
+        bio: updated.data.bio,
+        avatar: updated.data.avatar,
+        status: updated.data.status,
+        createdAt: updated.data.createdAt,
+        updatedAt: updated.data.updatedAt,
+        friendRequestsSent: updated.data.friendRequestsSent || [],
+        friendRequestsReceived: updated.data.friendRequestsReceived || [],
+      }
+
+      set({ profile })
+      get().setAuthUser(user)
+      return { user, profile }
     } catch (err) {
       handleApiError(err)
       return null
@@ -238,9 +248,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isFetchingFriends: true })
     try {
       const res = await getAllFriends()
-
       const friends: Friend[] = Array.isArray(res.friends) ? res.friends : []
-
       set({ allFriends: friends })
     } catch (err) {
       handleApiError(err)
@@ -248,6 +256,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isFetchingFriends: false })
     }
   },
+
   fetchFriendRequests: async () => {
     try {
       // const requests: Friend[] = await getFriendRequests()
@@ -291,34 +300,50 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   connectSocket: () => {
-    const { socketConnected, authUser } = get()
-    if (socketConnected || !authUser) return
+    const { authUser, socketConnected } = get()
+    // console.log("connectSocket called, authUser:", authUser)
+
+    if (!authUser?._id) {
+      // console.warn("connectSocket skipped: authUser._id not available")
+      return
+    }
+
+    if (socketConnected) {
+      // console.log("WebSocket already connected for user:", authUser._id)
+      return
+    }
 
     const socketBaseUrl = import.meta.env.VITE_SOCKET_URL
-    // eslint-disable-next-line no-console
-    if (!socketBaseUrl) return console.error("❌ Missing VITE_SOCKET_URL in .env")
+    if (!socketBaseUrl) return
+    // console.error("❌ Missing VITE_SOCKET_URL in .env")
 
-    try {
-      const socketUrl = `${socketBaseUrl}?userId=${authUser._id}`
-      const socket = new WebSocket(socketUrl)
+    const socketUrl = `${socketBaseUrl}?userId=${authUser._id}`
+    const socket = new WebSocket(socketUrl)
 
-      socket.onopen = () => {
-        set({ socketConnected: true })
-      }
-      socket.onclose = () => {
-        set({ socketConnected: false })
-      }
+    socket.onopen = () => {
+      set({ socketConnected: true, socket })
+      toast.success("✅ WebSocket connected")
+      // console.log("✅ WebSocket connected for user:", authUser._id)
+    }
 
-      set({ socket })
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("WebSocket connection failed:", err)
+    socket.onclose = (event) => {
+      set({ socketConnected: false, socket: null })
+      toast("⚠️ WebSocket disconnected")
+      // console.log("⚠️ WebSocket disconnected", event)
+    }
+
+    socket.onerror = (err) => {
+      // console.error("❌ WebSocket error:", err)
+      toast.error("❌ WebSocket connection error")
     }
   },
 
   disconnectSocket: () => {
     const socket = get().socket
-    if (socket) socket.close()
+    if (socket) {
+      socket.close()
+      // console.log("WebSocket manually disconnected")
+    }
     set({ socketConnected: false, socket: null, onlineUsers: [] })
   },
 }))

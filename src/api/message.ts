@@ -14,50 +14,100 @@ export type Message = {
   fileType?: string
 }
 
-// API response type
-export type MessageAPIResponse = {
+// Sender info
+export type IUserInfo = {
   _id: string
-  sender: string
-  receiver: string
-  text: string
-  createdAt: string
-  __v: number
-  fileUrl?: string
-  fileName?: string
-  fileType?: string
+  email: string
+  fullName: string
+  username: string
+  avatar?: string
 }
 
-// Send message dynamically
-export const sendMessage = async (receiverId: string, text?: string, file?: File) => {
-  if (!receiverId) throw new Error("Receiver ID is required")
+// Receiver info
+export type IReceiverInfo = {
+  id: string
+  email: string
+  fullName: string
+  username: string
+  avatar?: string
+}
+
+// Single message type
+export type IMessage = {
+  _id: string
+  senderId: string
+  receiverId: string
+  text: string
+  createdAt: string
+  chatId: string
+  __v: number
+  senderInfo: IUserInfo
+  receiverInfo: IReceiverInfo
+  fileUrl?: string
+  fileName?: string
+}
+
+//
+
+//
+export type IMessageResponse = {
+  success: boolean
+  users: {
+    me: IUserInfo
+    other: IReceiverInfo
+  }
+  _id: string
+  messages: IMessage[]
+  lastMessage?: IMessage
+}
+
+export const sendMessage = async (
+  receiverId: string,
+  text?: string,
+  file?: File
+): Promise<IMessageResponse> => {
+  if (!receiverId) throw new Error("receiverId is missing")
 
   const formData = new FormData()
-  formData.append("text", text ?? "")
-  if (file instanceof File) formData.append("file", file)
   formData.append("receiverId", receiverId)
+  formData.append("text", text ?? "")
 
-  const res = await api.post<{ success: boolean; message: MessageAPIResponse }>(
+  if (file) {
+    formData.append("file", file)
+  }
+
+  const res = await api.post<{ success: boolean; message: IMessageResponse }>(
     "/api/messages",
     formData
   )
 
-  return res.data
+  if (!res.data?.success) {
+    throw new Error("Failed to send message")
+  }
+
+  return res.data.message
+
+  return res.data.message
 }
 
 // Get messages for a specific chat (use chat _id, not static userId)
 export const getMessages = async (chatId: string): Promise<Message[]> => {
   try {
-    const res = await api.get<{ data: MessageAPIResponse[] }>(`/api/messages/${chatId}`)
-    return (res.data.data || []).map((m) => ({
-      _id: m._id,
-      senderId: m.sender,
-      receiverId: m.receiver,
-      text: m.text,
-      createdAt: m.createdAt,
-      fileUrl: m.fileUrl,
-      fileName: m.fileName,
-      fileType: m.fileType,
-    }))
+    const res = await api.get<{ data: IMessageResponse[] }>(`/api/messages/${chatId}`)
+    const messages = res.data.data || []
+
+    // Flatten messages array and map to Message type
+    return messages.flatMap((m) =>
+      (m.messages || []).map((msg) => ({
+        _id: msg._id,
+        senderId: msg.senderId,
+        receiverId: msg.receiverId,
+        text: msg.text,
+        createdAt: msg.createdAt,
+        fileUrl: msg.fileUrl,
+        fileName: msg.fileName,
+      }))
+    )
   } catch (err) {
     handleApiError(err)
     return []
@@ -67,8 +117,8 @@ export const getMessages = async (chatId: string): Promise<Message[]> => {
 // types for chats/users list
 type ChatAPIResponse = {
   _id: string
-  messages: MessageAPIResponse[]
-  lastMessage?: MessageAPIResponse
+  messages: IMessageResponse[]
+  lastMessage?: IMessageResponse
 }
 
 type GetUsersResponse = {

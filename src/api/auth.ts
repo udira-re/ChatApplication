@@ -38,11 +38,8 @@ export const refreshToken = async (refreshToken: string) => {
 
 // ✅ Get user profile
 export const getUserProfile = async () => {
-  // no need to manually pass ngrok header if set in api instance
-  const res = await api.get<{ _id: string; username: string; fullName: string; email: string }>(
-    "/api/user/profile"
-  )
-  return res.data
+  const { data } = await api.get("/api/user/profile")
+  return data
 }
 
 // ✅ Update user (example)

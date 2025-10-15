@@ -14,7 +14,12 @@ const MessageInput: React.FC = () => {
   const [isSending, setIsSending] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const sendMessage = useChatStore((state) => state.sendMessage)
+
+  // Inside your componenth
+  const chatStore = useChatStore() // ✅ call the hook
+
+  const selectedUser = chatStore.selectedUser
+  const sendMessage = chatStore.sendMessage
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -33,17 +38,64 @@ const MessageInput: React.FC = () => {
     setImagePreview(null)
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
+  //
+  //
 
+  // const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault()
+  //   if (isSending || (!text.trim() && !fileInputRef.current?.files?.[0])) return
+
+  //   // Type guard to check if selectedUser is IReceiverInfo
+  //   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  //   const isReceiverInfo = (user: any): user is IReceiverInfo => {
+  //     return user && "id" in user
+  //   }
+
+  //   if (selectedUser) {
+  //     if ("id" in selectedUser) {
+  //       console.log("Receiver ID:", selectedUser.id)
+  //     } else if ("_id" in selectedUser) {
+  //       console.log("User _id (not receiver):", selectedUser._id)
+  //     } else {
+  //       console.log("selectedUser has unexpected structure:", selectedUser)
+  //     }
+  //   } else {
+  //     console.log("selectedUser is null")
+  //   }
+
+  //   setIsSending(true)
+  //   try {
+  //     await sendMessage({
+  //       text: text.trim() || undefined,
+  //       file: fileInputRef.current?.files?.[0],
+  //       receiverId: selectedUser.id,
+  //     })
+
+  //     setText("")
+  //     removeImage()
+  //   } catch (error) {
+  //     handleApiError(error)
+  //   } finally {
+  //     setIsSending(false)
+  //   }
+  // }
   const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isSending || (!text.trim() && !fileInputRef.current?.files?.[0])) return
+
+    if (!selectedUser || !("_id" in selectedUser)) {
+      toast.error("No user selected to send message")
+      return
+    }
 
     setIsSending(true)
     try {
       await sendMessage({
         text: text.trim() || undefined,
         file: fileInputRef.current?.files?.[0],
+        receiverId: selectedUser._id, // use this _id as receiver
       })
+
       setText("")
       removeImage()
     } catch (error) {
@@ -93,7 +145,7 @@ const MessageInput: React.FC = () => {
           {/* Emoji button */}
           <button
             type="button"
-            className="absolute   pr-5 right-10 sm:right-12 text-zinc-400 hover:text-emerald-500 transition-colors cursor-pointer"
+            className="absolute pr-5 right-10 sm:right-12 text-zinc-400 hover:text-emerald-500 transition-colors cursor-pointer"
             onClick={() => setShowEmojiPicker((prev) => !prev)}
           >
             <Smile size={20} />

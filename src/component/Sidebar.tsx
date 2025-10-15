@@ -3,7 +3,7 @@ import { Users } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-import type { User } from "../store/use_chat_store"
+import type { IMessageResponse } from "../api/message"
 
 import { useAuthStore } from "../store/store"
 import { useChatStore } from "../store/use_chat_store"
@@ -33,8 +33,8 @@ const Sidebar = () => {
     getUsers()
   }, [getUsers])
 
-  const filteredUsers: User[] = showOnlineOnly
-    ? users.filter((user) => onlineUsers.includes(user.id))
+  const filteredUsers: IMessageResponse[] = showOnlineOnly
+    ? users.filter((user) => onlineUsers.includes(user.users.other.id))
     : users
 
   if (isUsersLoading) return <SidebarSkeleton />
@@ -49,7 +49,7 @@ const Sidebar = () => {
             className="text-xs text-zinc-500  underline hover:text-blue-400 cursor-pointer"
             onClick={() => navigate("/friends")}
           >
-            View All
+            See All Friends
           </span>
         </div>
 
@@ -71,8 +71,8 @@ const Sidebar = () => {
       <div className="overflow-y-auto w-full py-3">
         {filteredUsers.map((user) => (
           <button
-            key={user.id}
-            onClick={() => setSelectedUser(user)}
+            key={user.users.other.id}
+            onClick={() => setSelectedUser(user.users.other)}
             className={`
               w-full p-3 flex items-center gap-3
               hover:bg-base-300 transition-colors
@@ -81,11 +81,11 @@ const Sidebar = () => {
           >
             <div className="relative mx-auto lg:mx-0">
               <img
-                src={user.avatar || "/avatar.png"}
-                alt={user.name}
+                src={user.users.other.avatar || "/avatar.png"}
+                alt={user.users.other.username}
                 className="size-12 object-cover rounded-full"
               />
-              {onlineUsers.includes(user.id) && (
+              {onlineUsers.includes(user.users.other.id) && (
                 <span
                   className="absolute bottom-0 right-0 size-3 bg-green-500
                   rounded-full ring-2 ring-zinc-900"
@@ -95,9 +95,11 @@ const Sidebar = () => {
 
             {/* User info - only visible on larger screens */}
             <div className="hidden lg:block text-left min-w-0">
-              <div className="font-medium truncate">{user.name}</div>
+              <div className="font-medium truncate">{user.users.other.fullName}</div>
               <div className="text-sm text-zinc-400 truncate">
-                {user.lastMessage || "No messages yet"}
+                {typeof user.lastMessage === "string"
+                  ? user.lastMessage
+                  : user.lastMessage?.text || "No messages yet"}
               </div>
             </div>
           </button>
