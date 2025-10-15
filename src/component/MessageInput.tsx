@@ -1,21 +1,24 @@
-import { Image, Send, X } from "lucide-react"
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react"
+import { Image, Send, X, Smile } from "lucide-react"
+import React, { useRef, useState, lazy, Suspense, type ChangeEvent, type FormEvent } from "react"
 import toast from "react-hot-toast"
 
 import { useChatStore } from "../store/use_chat_store"
 import { handleApiError } from "../utillis/handle-api-error"
 
+// Lazy load emoji picker
+const EmojiPicker = lazy(() => import("emoji-picker-react"))
+
 const MessageInput: React.FC = () => {
   const [text, setText] = useState("")
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isSending, setIsSending] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const sendMessage = useChatStore((state) => state.sendMessage)
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file")
       return
@@ -33,14 +36,16 @@ const MessageInput: React.FC = () => {
 
   const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (isSending || (!text.trim() && !imagePreview)) return
+    if (isSending || (!text.trim() && !fileInputRef.current?.files?.[0])) return
 
     setIsSending(true)
     try {
-      await sendMessage({ text: text.trim(), image: imagePreview ?? undefined })
+      await sendMessage({
+        text: text.trim() || undefined,
+        file: fileInputRef.current?.files?.[0],
+      })
       setText("")
-      setImagePreview(null)
-      if (fileInputRef.current) fileInputRef.current.value = ""
+      removeImage()
     } catch (error) {
       handleApiError(error)
     } finally {
@@ -48,8 +53,14 @@ const MessageInput: React.FC = () => {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleEmojiClick = (emojiData: any) => {
+    setText((prev) => prev + emojiData.emoji)
+    setShowEmojiPicker(false)
+  }
+
   return (
-    <div className="p-4 w-full">
+    <div className="p-4 w-full relative">
       {imagePreview && (
         <div className="mb-3 flex items-center gap-2">
           <div className="relative">
@@ -69,15 +80,26 @@ const MessageInput: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-        <div className="flex-1 flex gap-2">
+      <form onSubmit={handleSendMessage} className="flex items-center gap-2 relative">
+        <div className="flex-1 flex items-center gap-2 relative">
           <input
             type="text"
-            className="w-full input input-bordered rounded-lg input-sm sm:input-md"
+            className="w-full input input-bordered rounded-lg input-sm sm:input-md pr-10"
             placeholder="Type a message..."
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
+
+          {/* Emoji button */}
+          <button
+            type="button"
+            className="absolute   pr-5 right-10 sm:right-12 text-zinc-400 hover:text-emerald-500 transition-colors cursor-pointer"
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+          >
+            <Smile size={20} />
+          </button>
+
+          {/* Image button */}
           <input
             type="file"
             accept="image/*"
@@ -94,6 +116,15 @@ const MessageInput: React.FC = () => {
           >
             <Image size={20} />
           </button>
+
+          {/* Emoji picker */}
+          {showEmojiPicker && (
+            <Suspense fallback={<div>Loading...</div>}>
+              <div className="absolute bottom-12 right-0 z-50">
+                <EmojiPicker onEmojiClick={handleEmojiClick} />
+              </div>
+            </Suspense>
+          )}
         </div>
 
         <button

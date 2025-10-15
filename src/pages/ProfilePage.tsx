@@ -1,6 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup"
 import { Camera, MessageSquare } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useForm, FormProvider, type SubmitHandler } from "react-hook-form"
 import toast from "react-hot-toast"
 import * as yup from "yup"
@@ -19,7 +19,6 @@ type ProfileFormValues = {
   avatar?: File | null
 }
 
-// Yup schema
 const schema = yup
   .object({
     username: yup.string().required("Username is required").min(3),
@@ -51,9 +50,14 @@ const schema = yup
   .required()
 
 const Profile: React.FC = () => {
-  const { authUser, profile, fetchProfile, updateProfile, isUpdatingProfile } = useAuthStore()
+  const authUser = useAuthStore((state) => state.authUser)
+  const profile = useAuthStore((state) => state.profile)
+  const fetchProfile = useAuthStore((state) => state.fetchProfile)
+  const updateProfile = useAuthStore((state) => state.updateProfile)
+  const isUpdatingProfile = useAuthStore((state) => state.isUpdatingProfile)
+
   const [previewImage, setPreviewImage] = useState<string | null>(null)
-  const [refetchTrigger] = useState(false)
+  const profileFetched = useRef(false)
 
   const methods = useForm<ProfileFormValues>({
     resolver: yupResolver(schema),
@@ -68,41 +72,63 @@ const Profile: React.FC = () => {
     },
   })
 
-  const { handleSubmit, reset, formState, register, setValue } = methods
+  const { handleSubmit, reset, register, setValue, formState } = methods
   const { errors, isDirty } = formState
 
-  // Fetch profile on mount or after update
+  // Load profile once
   useEffect(() => {
-    fetchProfile()
-      .then((data) => {
-        if (!data?.user) return
+    if (!authUser || profileFetched.current) return
+    profileFetched.current = true
+
+    const loadProfile = async () => {
+      try {
+        const data = await fetchProfile()
+        if (!data) return
 
         reset({
-          username: data.user.username,
-          fullName: data.user.fullName,
-          email: data.user.email,
-          phone: data.phone,
-          bio: data.bio,
-          notifications: data.notifications ?? true,
+          username: data.user.username ?? "",
+          fullName: data.user.fullName ?? "",
+          email: data.user.email ?? "",
+          phone: data.profile.phone ?? "",
+          bio: data.profile.bio ?? "",
+          notifications: data.user.notifications ?? true,
           avatar: null,
         })
 
-        // eslint-disable-next-line promise/always-return
-        setPreviewImage(data.avatar || null)
-      })
-      .catch((err) => handleApiError(err))
-  }, [reset, refetchTrigger, fetchProfile])
+        // Set preview image with full URL if avatar exists
+        setPreviewImage(
+          data.profile.avatar ? `${import.meta.env.VITE_API_BASE_URL}${data.profile.avatar}` : null
+        )
+      } catch (err) {
+        handleApiError(err)
+      }
+    }
 
-  // Handle image preview
+    loadProfile()
+  }, [authUser, fetchProfile, reset])
+
+  // Cleanup blob URLs
+  useEffect(() => {
+    return () => {
+      if (previewImage?.startsWith("blob:")) URL.revokeObjectURL(previewImage)
+    }
+  }, [previewImage])
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setPreviewImage(URL.createObjectURL(file))
+
+    // Revoke old blob URL if any
+    if (previewImage?.startsWith("blob:")) URL.revokeObjectURL(previewImage)
+
+    const objectUrl = URL.createObjectURL(file)
+    setPreviewImage(objectUrl)
     setValue("avatar", file, { shouldDirty: true })
   }
 
-  // Handle form submit
   const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
+    if (isUpdatingProfile) return
+
     try {
       const formData = new FormData()
       formData.append("username", data.username)
@@ -110,29 +136,28 @@ const Profile: React.FC = () => {
       formData.append("email", data.email)
       formData.append("phone", data.phone)
       formData.append("bio", data.bio)
-      formData.append("notifications", data.notifications ? "true" : "false")
       if (data.avatar) formData.append("avatar", data.avatar)
 
       const updatedProfile = await updateProfile(formData)
-      // console.log("Update profile response:", updatedProfile)
+      if (!updatedProfile) return
 
-      if (updatedProfile) {
-        toast.success("Profile updated successfully!")
+      const { user, profile } = updatedProfile
 
-        // Reset form with updated values
-        reset({
-          username: updatedProfile.user.username,
-          fullName: updatedProfile.user.fullName,
-          email: updatedProfile.user.email,
-          phone: updatedProfile.phone,
-          bio: updatedProfile.bio,
-          notifications: updatedProfile.notifications ?? true,
-          avatar: null,
-        })
+      reset({
+        username: user.username ?? "",
+        fullName: user.fullName ?? "",
+        email: user.email ?? "",
+        phone: profile.phone ?? "",
+        bio: profile.bio ?? "",
+        avatar: null,
+      })
 
-        // Set preview image using updated avatar URL
-        setPreviewImage(updatedProfile.avatar || previewImage)
-      }
+      // Set preview image to the updated avatar from server
+      setPreviewImage(
+        profile.avatar ? `${import.meta.env.VITE_API_BASE_URL}${profile.avatar}` : null
+      )
+
+      toast.success("Profile updated successfully!")
     } catch (err) {
       handleApiError(err)
     }
@@ -143,21 +168,23 @@ const Profile: React.FC = () => {
       <div className="max-w-2xl mx-auto p-4 py-8">
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)} className="bg-base-300 rounded-xl p-6 space-y-8">
+            {/* Header */}
             <div className="text-center">
               <h1 className="text-2xl font-semibold">{authUser?.username ?? "Profile"}</h1>
               <p className="mt-2 text-gray-500">Your profile information</p>
             </div>
 
-            {/* Avatar */}
+            {/* Avatar Upload */}
             <div className="flex flex-col items-center gap-4">
               <div className="relative">
                 <div className="w-32 h-32 rounded-full border-4 overflow-hidden flex items-center justify-center bg-gray-200">
                   {previewImage ? (
-                    <img src={previewImage} alt="Profile" className="w-32 h-32 object-cover" />
+                    <img src={previewImage} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-gray-500 font-semibold">Profile</span>
                   )}
                 </div>
+
                 <label
                   htmlFor="avatar-upload"
                   className={`absolute bottom-1 right-0 bg-base-content hover:scale-105 p-2 rounded-full cursor-pointer transition-all duration-200 ${
@@ -181,14 +208,13 @@ const Profile: React.FC = () => {
               </p>
             </div>
 
-            {/* Form Fields */}
+            {/* Fields */}
             <div className="space-y-6">
               <InputField required type="text" label="Username" name="username" />
               <InputField required type="text" label="Full Name" name="fullName" />
               <InputField required type="text" label="Email" name="email" />
               <InputField required type="text" label="Phone" name="phone" />
 
-              {/* Bio */}
               <div className="form-control">
                 <label className="label">
                   <span className="label-text font-medium flex items-center gap-2">
@@ -197,17 +223,11 @@ const Profile: React.FC = () => {
                 </label>
                 <textarea
                   {...register("bio")}
-                  className="textarea textarea-bordered w-full resize-none"
+                  className="textarea textarea-bordered w-full resize-none bg-gray-400 pl-2 text-sm placeholder:text-gray-400 border-white"
                   rows={4}
                   placeholder="Write something about yourself"
                 />
                 {errors.bio && <p className="text-red-500 text-xs mt-1">{errors.bio.message}</p>}
-              </div>
-
-              {/* Notifications */}
-              <div className="flex items-center gap-2">
-                <input type="checkbox" {...register("notifications")} className="w-4 h-4" />
-                <label className="text-sm text-gray-400">Notify me for friend requests</label>
               </div>
             </div>
 
@@ -230,7 +250,7 @@ const Profile: React.FC = () => {
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between border-b border-gray-300 py-2">
                   <span>Member Since</span>
-                  <span>{profile?.createdAt?.split("T")[0]}</span>
+                  <span>{profile?.createdAt?.split("T")[0] ?? "N/A"}</span>
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <span>Account Status</span>

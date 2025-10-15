@@ -1,20 +1,11 @@
 import api from "./api"
 
-// Add interceptor to attach token automatically
-// api.interceptors.request.use((config) => {
-//   const token = sessionStorage.getItem("accessToken")
-//   if (token) {
-//     config.headers.Authorization = `Bearer ${token}`
-//   }
-//   return config
-// })
-
 // Types
 export type AuthResponse = {
   accessToken: string
   refreshToken: string
   user: {
-    id: string
+    _id: string
     username: string
     fullName: string
     email: string
@@ -47,11 +38,14 @@ export const refreshToken = async (refreshToken: string) => {
 
 // ✅ Get user profile
 export const getUserProfile = async () => {
-  const res = await api.get("/api/user/profile")
+  // no need to manually pass ngrok header if set in api instance
+  const res = await api.get<{ _id: string; username: string; fullName: string; email: string }>(
+    "/api/user/profile"
+  )
   return res.data
 }
 
-// ✅ Update user (example if needed)
+// ✅ Update user (example)
 export const updateUser = async (data: { fullName?: string; profilePic?: string }) => {
   const res = await api.put("/api/user/update", data)
   return res.data

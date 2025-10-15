@@ -17,7 +17,7 @@ const ChatHeader: React.FC = () => {
           {/* Avatar */}
           <div className="avatar">
             <div className="size-10 rounded-full relative">
-              <img src={selectedUser.profilePic || "/avatar.png"} alt={selectedUser.name} />
+              <img src={selectedUser.avatar || "/avatar.png"} alt={selectedUser.name} />
             </div>
           </div>
 

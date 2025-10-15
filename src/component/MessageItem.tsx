@@ -21,18 +21,20 @@ const MessageStatusIcon = ({ status }: { status: Message["status"] }) => {
 }
 
 type Props = {
-  message: Message & { avatar?: string } // optional avatar for sender
+  message: Message & { avatar?: string }
 }
 
 export default function MessageItem({ message }: Props) {
   const authUser = useAuthStore.getState().authUser
   const profile = useAuthStore.getState().profile
-  const isMe = message.senderId === authUser?.id
+  const isMe = message.senderId === authUser?._id
 
+  // eslint-disable-next-line sonarjs/no-duplicate-string
   const senderAvatar = isMe ? profile?.avatar || "/avatar.png" : message.avatar || "/avatar.png"
 
   return (
     <div className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
+      {/* Avatar on left for receiver */}
       {!isMe && (
         <div className="chat-image avatar">
           <div className="w-10 h-10 rounded-full border overflow-hidden">
@@ -43,24 +45,27 @@ export default function MessageItem({ message }: Props) {
 
       <div
         className={`chat-bubble flex flex-col max-w-xs break-words p-2 rounded-lg ${
-          isMe ? "bg-blue-100 text-right" : "bg-gray-100"
+          isMe ? "bg-blue-100 text-right" : "bg-gray-100 text-left"
         }`}
       >
-        {message?.avatar && (
+        {/* Show image above text */}
+        {message.fileUrl && (
           <img
-            src={message?.avatar}
+            src={message.fileUrl}
             alt="Attachment"
             className="sm:max-w-[200px] rounded-md mb-2"
           />
         )}
+
         {message.text && <p>{message.text}</p>}
 
         <div className="flex justify-end items-center mt-1 gap-1 text-xs opacity-70">
-          <time>{formatMessageTime(message.createdAt)}</time>
+          <time>{formatMessageTime(new Date(message.createdAt))}</time>
           {isMe && <MessageStatusIcon status={message.status} />}
         </div>
       </div>
 
+      {/* Avatar on right for sender */}
       {isMe && (
         <div className="chat-image avatar">
           <div className="w-10 h-10 rounded-full border overflow-hidden">

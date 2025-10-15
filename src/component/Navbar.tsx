@@ -1,4 +1,4 @@
-import { Settings, User } from "lucide-react"
+import { Settings, User, Loader } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { Link } from "react-router-dom"
@@ -16,13 +16,13 @@ const Navbar = () => {
     try {
       await logOut()
       toast.success("Logged out successfully!")
-      setIsDropdownOpen(false) // close after logout
+      setIsDropdownOpen(false)
     } catch (err) {
       toast.error((err as Error).message || "Failed to log out")
     }
   }
 
-  // 🔹 Close dropdown when clicking outside
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -30,14 +30,9 @@ const Navbar = () => {
       }
     }
 
-    if (isDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-
+    document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [isDropdownOpen])
+  }, [])
 
   return (
     <header className="border-b border-base-300 fixed w-full top-0 z-40 backdrop-blur-lg bg-base-100/80">
@@ -59,7 +54,7 @@ const Navbar = () => {
           </Link>
 
           {/* Profile Dropdown */}
-          {authUser && (
+          {authUser ? (
             <div className="relative" ref={dropdownRef}>
               <button
                 className="flex items-center space-x-2 hover:opacity-80 transition"
@@ -89,6 +84,11 @@ const Navbar = () => {
                   </button>
                 </div>
               )}
+            </div>
+          ) : (
+            // Show loader if authUser is not ready yet
+            <div className="flex items-center">
+              <Loader className="w-5 h-5 animate-spin" />
             </div>
           )}
         </div>

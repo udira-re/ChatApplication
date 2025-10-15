@@ -33,8 +33,8 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     try {
       await login(data)
+      navigate("/home", { replace: true })
       toast.success("Login successfully!")
-      navigate("/home")
     } catch (err) {
       handleApiError(err)
     }

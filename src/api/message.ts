@@ -1,8 +1,7 @@
-import type { User } from "../store/use_chat_store"
-
-import api from "./api"
-
 // src/api/messages.ts
+import { handleApiError } from "../utillis/handle-api-error"
+// eslint-disable-next-line import/order
+import api from "./api"
 
 export type Message = {
   _id: string
@@ -10,39 +9,80 @@ export type Message = {
   receiverId: string
   text: string
   createdAt: string
+  fileUrl?: string
+  fileName?: string
+  fileType?: string
 }
-const MOCK_USERS: User[] = [
-  { id: "1", name: "Alice" },
-  { id: "2", name: "Bob" },
-  { id: "3", name: "Charlie" },
-]
 
-export const sendMessage = async (receiverId: string, text: string) => {
-  const token = sessionStorage.getItem("accessToken")
-  const res = await api.post(
-    `/api/messages`,
-    { receiverId, text },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
+// API response type
+export type MessageAPIResponse = {
+  _id: string
+  sender: string
+  receiver: string
+  text: string
+  createdAt: string
+  __v: number
+  fileUrl?: string
+  fileName?: string
+  fileType?: string
+}
+
+// Send message dynamically
+export const sendMessage = async (receiverId: string, text?: string, file?: File) => {
+  if (!receiverId) throw new Error("Receiver ID is required")
+
+  const formData = new FormData()
+  formData.append("text", text ?? "")
+  if (file instanceof File) formData.append("file", file)
+  formData.append("receiverId", receiverId)
+
+  const res = await api.post<{ success: boolean; message: MessageAPIResponse }>(
+    "/api/messages",
+    formData
   )
+
   return res.data
 }
 
-export const getMessages = async (userId: string): Promise<Message[]> => {
-  const token = sessionStorage.getItem("accessToken")
-  const res = await api.get(`/api/messages/${userId}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-  return res.data?.data || []
+// Get messages for a specific chat (use chat _id, not static userId)
+export const getMessages = async (chatId: string): Promise<Message[]> => {
+  try {
+    const res = await api.get<{ data: MessageAPIResponse[] }>(`/api/messages/${chatId}`)
+    return (res.data.data || []).map((m) => ({
+      _id: m._id,
+      senderId: m.sender,
+      receiverId: m.receiver,
+      text: m.text,
+      createdAt: m.createdAt,
+      fileUrl: m.fileUrl,
+      fileName: m.fileName,
+      fileType: m.fileType,
+    }))
+  } catch (err) {
+    handleApiError(err)
+    return []
+  }
 }
-const delay = (ms: number) => new Promise((res) => setTimeout(res, ms))
 
-export const getUsersAPI = async (): Promise<User[]> => {
-  await delay(500)
-  return MOCK_USERS
+// types for chats/users list
+type ChatAPIResponse = {
+  _id: string
+  messages: MessageAPIResponse[]
+  lastMessage?: MessageAPIResponse
+}
+
+type GetUsersResponse = {
+  success: boolean
+  response: ChatAPIResponse[]
+}
+
+// Fetch all users with their last messages
+export const getUsersAPI = async (): Promise<GetUsersResponse> => {
+  try {
+    const res = await api.get<GetUsersResponse>("/api/messages/chats")
+    return res.data
+  } catch (err) {
+    handleApiError(err)
+    return { success: false, response: [] }
+  }
 }

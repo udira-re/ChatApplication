@@ -1,10 +1,10 @@
 import api from "./api"
 
 export type Friend = {
-  id: string
-  name: string
+  _id: string
+  fullName: string
   email: string
-  avatar?: string
+  userName: string
 }
 
 // ✅ Get all friends
@@ -13,9 +13,15 @@ export const getAllFriends = async () => {
   return res.data
 }
 
-// ✅ Get all friend requests
-export const getFriendRequests = async () => {
-  const res = await api.get("/api/user/friends/requests")
+// Get all Users
+export const getAllUser = async () => {
+  const res = await api.get("/api/user")
+  return res.data
+}
+
+// ✅ Send friend request
+export const SendFriendRequests = async (receiverId: string) => {
+  const res = await api.post("/api/user/friends/request", { receiverId })
   return res.data
 }
 
