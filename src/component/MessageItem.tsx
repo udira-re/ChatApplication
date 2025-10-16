@@ -1,77 +1,66 @@
-import { Check, CheckCheck, XCircle } from "lucide-react"
-
-import type { Message } from "../store/use_chat_store"
+// MessageItem.tsx
+import type { IMessage } from "../api/message"
 
 import { useAuthStore } from "../store/store"
 import { formatMessageTime } from "../utillis/utils"
 
-const MessageStatusIcon = ({ status }: { status: Message["status"] }) => {
-  switch (status) {
-    case "sent":
-      return <Check className="w-4 h-4 text-gray-400" />
-    case "delivered":
-      return <CheckCheck className="w-4 h-4 text-gray-400" />
-    case "read":
-      return <CheckCheck className="w-4 h-4 text-blue-500" />
-    case "failed":
-      return <XCircle className="w-4 h-4 text-red-500" />
-    default:
-      return null
-  }
-}
-
 type Props = {
-  message: Message & { avatar?: string }
+  message: IMessage & { avatar?: string; fileName?: string }
 }
 
 export default function MessageItem({ message }: Props) {
   const authUser = useAuthStore.getState().authUser
-  const profile = useAuthStore.getState().profile
-  const isMe = message.senderId === authUser?._id
-
-  // eslint-disable-next-line sonarjs/no-duplicate-string
-  const senderAvatar = isMe ? profile?.avatar || "/avatar.png" : message.avatar || "/avatar.png"
-
+  const isMe = message.sender === authUser?._id
+  const senderAvatar = isMe ? authUser?.avatar || "/avatar.png" : message.avatar || "/avatar.png"
+  // Debug console
+  // console.log("---- MessageItem ----")
+  // console.log("Message ID:", message.id)
+  // console.log("Message sender:", message.sender)
+  // console.log("Message receiver:", message.receiver)
+  // console.log("Message text:", message.text)
+  // console.log("Auth user ID:", authUser?._id)
+  // console.log("isMe:", isMe)
+  // console.log("Avatar used:", message.avatar)
+  // console.log("--------------------")
   return (
     <div className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
-      {/* Avatar on left for receiver */}
+      {/* Left avatar for received messages */}
       {!isMe && (
-        <div className="chat-image avatar">
-          <div className="w-10 h-10 rounded-full border overflow-hidden">
-            <img src={senderAvatar} alt="profile pic" />
-          </div>
-        </div>
+        <img
+          src={senderAvatar}
+          alt="avatar"
+          className="w-10 h-10 rounded-full object-cover border"
+        />
       )}
 
+      {/* Message bubble */}
       <div
-        className={`chat-bubble flex flex-col max-w-xs break-words p-2 rounded-lg ${
-          isMe ? "bg-blue-100 text-right" : "bg-gray-100 text-left"
+        className={`flex flex-col max-w-xs break-words p-2 rounded-lg ${
+          isMe ? "bg-blue-500 text-white rounded-tr-none" : "bg-gray-200 text-black rounded-tl-none"
         }`}
       >
-        {/* Show image above text */}
+        {message.text && <p className="whitespace-pre-wrap">{message.text}</p>}
+
         {message.fileUrl && (
           <img
             src={message.fileUrl}
-            alt="Attachment"
-            className="sm:max-w-[200px] rounded-md mb-2"
+            alt={message.fileName || "file"}
+            className="rounded-md mt-1 max-w-[200px] object-cover"
           />
         )}
 
-        {message.text && <p>{message.text}</p>}
-
         <div className="flex justify-end items-center mt-1 gap-1 text-xs opacity-70">
           <time>{formatMessageTime(new Date(message.createdAt))}</time>
-          {isMe && <MessageStatusIcon status={message.status} />}
         </div>
       </div>
 
-      {/* Avatar on right for sender */}
+      {/* Right avatar for sent messages */}
       {isMe && (
-        <div className="chat-image avatar">
-          <div className="w-10 h-10 rounded-full border overflow-hidden">
-            <img src={profile?.avatar || "/avatar.png"} alt="profile pic" />
-          </div>
-        </div>
+        <img
+          src={authUser?.avatar || "/avatar.png"}
+          alt="avatar"
+          className="w-10 h-10 rounded-full object-cover border"
+        />
       )}
     </div>
   )

@@ -1,42 +1,24 @@
+// ChatContainer.tsx
 import { useEffect, useRef } from "react"
 
 import { useChatStore, type Message } from "../store/use_chat_store"
 import ChatHeader from "./ChatHeader"
 import MessageInput from "./MessageInput"
+import MessageItem from "./MessageItem"
 import MessageSkeleton from "./skeleton/MessageSkeleton"
-
-// Renders each message item
-const MessageItem: React.FC<{ message: Message }> = ({ message }) => (
-  <div
-    className={`flex flex-col ${message.senderId === message.receiverId ? "items-start" : "items-end"}`}
-  >
-    {message.text && (
-      <p className="bg-gray-200 p-2 rounded-md max-w-xs break-words">{message.text}</p>
-    )}
-    {message.fileUrl && (
-      <img
-        src={message.fileUrl}
-        alt={message.fileName || "file"}
-        className="max-w-xs rounded-md mt-1"
-      />
-    )}
-  </div>
-)
 
 const ChatContainer: React.FC = () => {
   const { messages, isMessagesLoading, selectedUser } = useChatStore()
-
   const messageEndRef = useRef<HTMLDivElement | null>(null)
 
-  // Fetch messages and subscribe to real-time updates when selectedUser changes
+  // Subscribe to real-time messages
   useEffect(() => {
     const { subscribeToMessages, unsubscribeFromMessages } = useChatStore.getState()
-
-    subscribeToMessages() // only subscribe, do NOT fetch messages here
+    subscribeToMessages()
     return () => unsubscribeFromMessages()
   }, [])
 
-  // Scroll to bottom whenever messages change
+  // Scroll to bottom on new messages
   useEffect(() => {
     if (messageEndRef.current) {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" })

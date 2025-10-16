@@ -27,6 +27,17 @@ export type Message = {
   status: MessageStatus
   avatar?: string
 }
+export type IMessage = {
+  id: string
+  sender: string
+  receiver: string
+  text?: string
+  fileUrl?: string
+  fileName?: string
+  createdAt: string
+  status: MessageStatus
+  avatar?: string
+}
 
 type ChatState = {
   messages: Message[]
@@ -155,36 +166,41 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const tempId = Date.now().toString()
     const tempMessage: Message = {
       id: tempId,
-      senderId: authUser._id,
-      receiverId: finalReceiverId,
+      senderId: authUser._id, // correct senderId
+      receiverId: finalReceiverId, // correct receiverId
       text,
       fileUrl: file ? URL.createObjectURL(file) : undefined,
       createdAt: new Date().toISOString(),
       status: "sent",
-      avatar: profile?.avatar,
+      avatar: profile?.avatar, // your avatar for temp message
     }
 
+    // Add temporary message
     set({ messages: [...get().messages, tempMessage] })
 
     try {
-      const msg = await apiSendMessage(finalReceiverId, text, file) // ✅ returns IMessage
+      const msg = await apiSendMessage(finalReceiverId, text, file) // returns IMessage
 
       const newMsg: Message = {
         id: msg._id,
         senderId: msg.senderId,
         receiverId: msg.receiverId,
         text: msg.text,
-        fileUrl: msg.fileUrl, // optional
-        fileName: msg.fileName, // optional
+        fileUrl: msg.fileUrl,
+        fileName: msg.fileName,
         createdAt: msg.createdAt,
         status: "delivered",
-        avatar: profile?.avatar,
+        // Use correct avatar based on sender
+        avatar: msg.senderId === authUser._id ? profile?.avatar : selectedUser?.avatar,
       }
+      // console.log(newMsg)
 
+      // Replace temp message with server message
       set({
         messages: get().messages.map((m) => (m.id === tempId ? newMsg : m)),
       })
     } catch (err) {
+      // Mark temp message as failed if API call fails
       set({
         messages: get().messages.map((m) => (m.id === tempId ? { ...m, status: "failed" } : m)),
       })
@@ -197,25 +213,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const authUserId = useAuthStore.getState().authUser?._id
 
       const res = await api.get<IMessageGetResponse>(`/api/messages/${chatId}`)
+
       const data = res.data
 
       if (!data || !data.messages?.messages) return
 
-      const messages: Message[] = data.messages.messages.map((m) => ({
+      const messages: IMessage[] = data.messages.messages.map((m) => ({
         id: m._id,
-        senderId: m.senderId,
-        receiverId: m.receiverId,
+        sender: m.sender,
+        receiver: m.receiver,
         text: m.text,
         fileUrl: m.fileUrl,
         fileName: m.fileName,
         createdAt: m.createdAt,
         status: "delivered",
         avatar:
-          m.senderId === authUserId
+          m.sender === authUserId
             ? data.messages.users?.me?.avatar || "/avatar.png"
             : data.messages.users?.other?.avatar || "/avatar.png",
       }))
 
+      // console.log(messages)
       set({ messages })
     } catch (err) {
       handleApiError(err)
@@ -223,6 +241,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ isMessagesLoading: false })
     }
   },
+
   subscribeToMessages: () => {
     const { selectedUser, socketSubscribed } = get() // remove 'messages'
     const socket = useAuthStore.getState().socket

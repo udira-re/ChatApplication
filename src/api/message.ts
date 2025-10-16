@@ -102,22 +102,16 @@ export const sendMessage = async (
   return res.data.message
 }
 
-export const getMessages = async (chatId: string): Promise<Message[]> => {
+export const getMessages = async (chatId: string): Promise<IMessage[]> => {
+  // console.log("getMessages called with chatId:", chatId)
   try {
-    const res = await api.get<{ data: Message[] }>(`/api/messages/${chatId}`)
+    const res = await api.get(`/api/messages/${chatId}`)
+    // console.log("API response:", res)
     const messages = res.data.data || []
-
-    // Map to Message type (if necessary)
-    return messages.map((msg) => ({
-      _id: msg._id,
-      senderId: msg.senderId,
-      receiverId: msg.receiverId,
-      text: msg.text,
-      createdAt: msg.createdAt,
-      fileUrl: msg.fileUrl,
-      fileName: msg.fileName,
-    }))
+    // console.log("Messages array:", messages)
+    return messages
   } catch (err) {
+    // console.error("Error in getMessages:", err)
     handleApiError(err)
     return []
   }

@@ -97,9 +97,7 @@ const Sidebar = () => {
 
             <div className="hidden lg:block text-left min-w-0">
               <div className="font-medium truncate">{user.name}</div>
-              <div className="text-sm text-zinc-400 truncate">
-                {user.lastMessage || "No messages yet"}
-              </div>
+              <div className="text-sm text-zinc-400 truncate">{user.lastMessage || ""}</div>
             </div>
           </button>
         ))}
