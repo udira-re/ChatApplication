@@ -160,7 +160,7 @@ const FriendListPage: React.FC = () => {
                   u.requestSent || authStore.profile?.friendRequestsSent?.includes(u.user._id)
                 return (
                   <li
-                    key={u._id}
+                    key={`user-${u.user._id}`}
                     className="border p-3 rounded-md flex justify-between items-center hover:bg-gray-100"
                   >
                     <div>
@@ -196,7 +196,7 @@ const FriendListPage: React.FC = () => {
                 .filter((f) => f._id !== authUser?._id)
                 .map((f) => (
                   <li
-                    key={f._id}
+                    key={`friend-${f._id}`}
                     className="border p-3 rounded-md flex justify-between items-center hover:bg-gray-100"
                   >
                     <div>
@@ -233,7 +233,7 @@ const FriendListPage: React.FC = () => {
 
                   return (
                     <li
-                      key={displayUser._id}
+                      key={`request-${displayUser.user._id}`}
                       className="border p-3 rounded-md flex justify-between items-center hover:bg-gray-100"
                     >
                       <div>

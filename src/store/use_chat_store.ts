@@ -62,25 +62,39 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   getUsers: async () => {
     set({ isUsersLoading: true })
+
     try {
       const authUser = useAuthStore.getState().authUser
       const data = await getUsersAPI()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const formatted = (data?.response || []).map((chat: any) => {
-        const otherUserId = chat._id.split("_").find((id: string) => id !== authUser?._id) || ""
-        const lastMsg = chat.messages?.[chat.messages.length - 1]
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const otherUser = chat.users?.find((u: any) => u._id !== authUser?._id)
+
+      const formatted = (data?.response || []).map((chat: unknown) => {
+        const lastMsg = chat.lastMessage
+
+        // Safely find the "other user"
+        const participant = chat.participants?.[0] || {}
+        let otherUser = undefined
+
+        if (participant.receiver?.id !== authUser?._id) {
+          otherUser = participant.receiver
+        } else if (participant.receiver?._id !== authUser?._id) {
+          otherUser = participant.receiver
+        }
+
+        // Fallback if somehow undefined
+        if (!otherUser) {
+          otherUser = { _id: "unknown", fullName: "Unknown" }
+        }
 
         return {
-          _id: otherUser?._id || otherUserId,
-          name: otherUser?.fullName || "Unknown",
-          avatar: otherUser?.avatar || "",
+          _id: otherUser._id,
+          name: otherUser.fullName || otherUser.username,
+          avatar: "/avatar.png", // replace if you have avatar field
           lastMessage: lastMsg?.text || "",
           lastMessageTime: lastMsg?.createdAt || "",
           chatId: chat._id,
         }
       })
+
       set({ users: formatted })
     } catch (err) {
       handleApiError(err)
@@ -88,7 +102,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ isUsersLoading: false })
     }
   },
-
   getFriends: async () => {
     set({ isUsersLoading: true })
     try {
