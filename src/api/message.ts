@@ -60,6 +60,19 @@ export type IMessageResponse = {
   messages: IMessage[]
   lastMessage?: IMessage
 }
+export type IMessageGetResponse = {
+  success: boolean
+  messages: {
+    // this matches API
+    users: {
+      me: IUserInfo
+      other: IReceiverInfo
+    }
+    messages: IMessage[]
+  }
+  _id: string
+  lastMessage?: IMessage
+}
 
 export const sendMessage = async (
   receiverId: string,
@@ -90,24 +103,21 @@ export const sendMessage = async (
   return res.data.message
 }
 
-// Get messages for a specific chat (use chat _id, not static userId)
 export const getMessages = async (chatId: string): Promise<Message[]> => {
   try {
-    const res = await api.get<{ data: IMessageResponse[] }>(`/api/messages/${chatId}`)
+    const res = await api.get<{ data: Message[] }>(`/api/messages/${chatId}`)
     const messages = res.data.data || []
 
-    // Flatten messages array and map to Message type
-    return messages.flatMap((m) =>
-      (m.messages || []).map((msg) => ({
-        _id: msg._id,
-        senderId: msg.senderId,
-        receiverId: msg.receiverId,
-        text: msg.text,
-        createdAt: msg.createdAt,
-        fileUrl: msg.fileUrl,
-        fileName: msg.fileName,
-      }))
-    )
+    // Map to Message type (if necessary)
+    return messages.map((msg) => ({
+      _id: msg._id,
+      senderId: msg.senderId,
+      receiverId: msg.receiverId,
+      text: msg.text,
+      createdAt: msg.createdAt,
+      fileUrl: msg.fileUrl,
+      fileName: msg.fileName,
+    }))
   } catch (err) {
     handleApiError(err)
     return []

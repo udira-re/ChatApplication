@@ -41,50 +41,19 @@ const MessageInput: React.FC = () => {
   //
   //
 
-  // const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
-  //   e.preventDefault()
-  //   if (isSending || (!text.trim() && !fileInputRef.current?.files?.[0])) return
-
-  //   // Type guard to check if selectedUser is IReceiverInfo
-  //   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  //   const isReceiverInfo = (user: any): user is IReceiverInfo => {
-  //     return user && "id" in user
-  //   }
-
-  //   if (selectedUser) {
-  //     if ("id" in selectedUser) {
-  //       console.log("Receiver ID:", selectedUser.id)
-  //     } else if ("_id" in selectedUser) {
-  //       console.log("User _id (not receiver):", selectedUser._id)
-  //     } else {
-  //       console.log("selectedUser has unexpected structure:", selectedUser)
-  //     }
-  //   } else {
-  //     console.log("selectedUser is null")
-  //   }
-
-  //   setIsSending(true)
-  //   try {
-  //     await sendMessage({
-  //       text: text.trim() || undefined,
-  //       file: fileInputRef.current?.files?.[0],
-  //       receiverId: selectedUser.id,
-  //     })
-
-  //     setText("")
-  //     removeImage()
-  //   } catch (error) {
-  //     handleApiError(error)
-  //   } finally {
-  //     setIsSending(false)
-  //   }
-  // }
   const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isSending || (!text.trim() && !fileInputRef.current?.files?.[0])) return
 
-    if (!selectedUser || !("_id" in selectedUser)) {
+    if (!selectedUser) {
       toast.error("No user selected to send message")
+      return
+    }
+
+    // Get receiverId from either _id or id
+    const receiverId = "_id" in selectedUser ? selectedUser._id : selectedUser.id
+    if (!receiverId) {
+      toast.error("Selected user does not have a valid ID")
       return
     }
 
@@ -93,7 +62,7 @@ const MessageInput: React.FC = () => {
       await sendMessage({
         text: text.trim() || undefined,
         file: fileInputRef.current?.files?.[0],
-        receiverId: selectedUser._id, // use this _id as receiver
+        receiverId, // safe receiver ID
       })
 
       setText("")

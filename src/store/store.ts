@@ -113,7 +113,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       sessionStorage.setItem("refreshToken", res.refreshToken)
 
       const user: AuthUser = {
-        _id: res.user._id || res.user._id,
+        _id: res.user._id,
         username: res.user.username,
         fullName: res.user.fullName,
         email: res.user.email,
@@ -136,15 +136,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       sessionStorage.setItem("accessToken", res.accessToken)
       sessionStorage.setItem("refreshToken", res.refreshToken)
 
+      const apiUser = res.user as {
+        _id?: string
+        id?: string
+        username: string
+        fullName: string
+        email: string
+      }
+
       const user: AuthUser = {
-        _id: res.user._id || res.user._id,
-        username: res.user.username,
-        fullName: res.user.fullName,
-        email: res.user.email,
+        _id: apiUser._id || apiUser.id || "", // fallback to empty string if missing
+        username: apiUser.username,
+        fullName: apiUser.fullName,
+        email: apiUser.email,
       }
 
       get().setAuthUser(user)
-      get().connectSocket()
+      get().connectSocket() // now _id exists, socket will connect
     } catch (err) {
       handleApiError(err)
       throw err
@@ -178,7 +186,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const user: AuthUser = {
-        _id: res.data.user._id || res.data.user.id,
+        _id: res.data.user._id,
         username: res.data.user.username,
         fullName: res.data.user.fullName,
         email: res.data.user.email,
@@ -215,7 +223,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!updated?.data?.user) return null
 
       const user: AuthUser = {
-        _id: updated.data.user._id || updated.data.user._id,
+        _id: updated.data.user._id,
         username: updated.data.user.username,
         fullName: updated.data.user.fullName,
         email: updated.data.user.email,
@@ -301,21 +309,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   connectSocket: () => {
     const { authUser, socketConnected } = get()
-    // console.log("connectSocket called, authUser:", authUser)
 
     if (!authUser?._id) {
-      // console.warn("connectSocket skipped: authUser._id not available")
       return
     }
 
     if (socketConnected) {
-      // console.log("WebSocket already connected for user:", authUser._id)
       return
     }
 
     const socketBaseUrl = import.meta.env.VITE_SOCKET_URL
     if (!socketBaseUrl) return
-    // console.error("❌ Missing VITE_SOCKET_URL in .env")
 
     const socketUrl = `${socketBaseUrl}?userId=${authUser._id}`
     const socket = new WebSocket(socketUrl)
@@ -323,17 +327,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     socket.onopen = () => {
       set({ socketConnected: true, socket })
       toast.success("✅ WebSocket connected")
-      // console.log("✅ WebSocket connected for user:", authUser._id)
     }
 
     socket.onclose = (event) => {
       set({ socketConnected: false, socket: null })
       toast("⚠️ WebSocket disconnected")
-      // console.log("⚠️ WebSocket disconnected", event)
     }
 
     socket.onerror = (err) => {
-      // console.error("❌ WebSocket error:", err)
       toast.error("❌ WebSocket connection error")
     }
   },
@@ -342,7 +343,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const socket = get().socket
     if (socket) {
       socket.close()
-      // console.log("WebSocket manually disconnected")
     }
     set({ socketConnected: false, socket: null, onlineUsers: [] })
   },

@@ -1,14 +1,15 @@
 import toast from "react-hot-toast"
 import { create } from "zustand"
 
+import api from "../api/api"
 import { getAllFriends } from "../api/friends"
 import {
-  getMessages as apiGetMessages,
   getUsersAPI,
   sendMessage as apiSendMessage,
   type IMessageResponse,
   type IUserInfo,
   type IReceiverInfo,
+  type IMessageGetResponse,
 } from "../api/message"
 import { handleApiError } from "../utillis/handle-api-error"
 import { useAuthStore } from "./store"
@@ -64,35 +65,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ isUsersLoading: true })
 
     try {
-      const authUser = useAuthStore.getState().authUser
       const data = await getUsersAPI()
+
+      const authUserId = useAuthStore.getState().authUser?._id
 
       const formatted = (data?.response || []).map((chat: unknown) => {
         const lastMsg = chat.lastMessage
 
-        // Safely find the "other user"
-        const participant = chat.participants?.[0] || {}
-        let otherUser = undefined
+        // Determine the other user in the chat
+        const otherUser =
+          chat.receiverInfo._id === authUserId
+            ? chat.senderInfo // If current user is the receiver, pick sender
+            : chat.receiverInfo // Otherwise pick receiver
 
-        if (participant.receiver?.id !== authUser?._id) {
-          otherUser = participant.receiver
-        } else if (participant.receiver?._id !== authUser?._id) {
-          otherUser = participant.receiver
-        }
-
-        // Fallback if somehow undefined
-        if (!otherUser) {
-          otherUser = { _id: "unknown", fullName: "Unknown" }
-        }
-
-        return {
-          _id: otherUser._id,
+        const formattedUser = {
+          id: otherUser._id,
           name: otherUser.fullName || otherUser.username,
-          avatar: "/avatar.png", // replace if you have avatar field
+          avatar: otherUser.avatar,
           lastMessage: lastMsg?.text || "",
           lastMessageTime: lastMsg?.createdAt || "",
           chatId: chat._id,
         }
+
+        return formattedUser
       })
 
       set({ users: formatted })
@@ -121,22 +116,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ isUsersLoading: false })
     }
   },
-
   setSelectedUser: (user: IUserInfo | IReceiverInfo | null) => {
-    const { unsubscribeFromMessages, subscribeToMessages, getMessages, messages } = get()
-    unsubscribeFromMessages()
+    const { subscribeToMessages, getMessages } = get()
 
     set({ selectedUser: user, messages: [] })
+    if (!user) return
 
-    if (user) {
-      const chatId = messages[0]?.receiverId || "" // fallback if no messages yet
-      if (chatId) {
-        getMessages(chatId)
-        subscribeToMessages()
-      }
+    const _id = "id" in user ? user.id : undefined
+    if (!_id) return
+
+    if (_id) {
+      getMessages(_id)
+      subscribeToMessages()
     }
   },
-
   sendMessage: async ({
     text,
     file,
@@ -206,11 +199,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
   getMessages: async (chatId: string) => {
     set({ isMessagesLoading: true })
     try {
-      const res = await apiGetMessages(chatId)
-      const data = res as unknown as IMessageResponse
       const authUserId = useAuthStore.getState().authUser?._id
 
-      const messages: Message[] = (data.messages || []).map((m) => ({
+      const res = await api.get<IMessageGetResponse>(`/api/messages/${chatId}`)
+      const data = res.data
+
+      if (!data || !data.messages?.messages) return
+
+      const messages: Message[] = data.messages.messages.map((m) => ({
         id: m._id,
         senderId: m.senderId,
         receiverId: m.receiverId,
@@ -219,7 +215,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
         fileName: m.fileName,
         createdAt: m.createdAt,
         status: "delivered",
-        avatar: m.senderId === authUserId ? data.users.me.avatar : data.users.other.avatar,
+        avatar:
+          m.senderId === authUserId
+            ? data.messages.users?.me?.avatar || "/avatar.png"
+            : data.messages.users?.other?.avatar || "/avatar.png",
       }))
 
       set({ messages })
@@ -229,16 +228,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ isMessagesLoading: false })
     }
   },
-
   subscribeToMessages: () => {
-    const { selectedUser, socketSubscribed } = get()
+    const { selectedUser, socketSubscribed } = get() // remove 'messages'
     const socket = useAuthStore.getState().socket
-    if (!selectedUser?._id || !socket || socketSubscribed) return
+    if (!selectedUser || !socket || socketSubscribed) return
+
+    // Get selectedUser ID safely
+    const selectedUserId = "id" in selectedUser ? selectedUser.id : selectedUser._id
 
     const listener = (event: MessageEvent) => {
       try {
         const incoming = JSON.parse(event.data)
-        if (incoming.senderId === selectedUser._id) {
+
+        // Only add messages related to this chat
+        if (incoming.senderId === selectedUserId || incoming.receiverId === selectedUserId) {
           const newMsg: Message = {
             id: incoming._id,
             senderId: incoming.senderId,
@@ -248,7 +251,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
             createdAt: incoming.createdAt,
             status: "delivered",
           }
-          set({ messages: [...get().messages, newMsg] })
+
+          // Append safely
+          get().messages.push(newMsg)
+          // Trigger re-render by calling setSelectedUser
+          setTimeout(() => get().setSelectedUser(selectedUser), 0)
         }
       } catch (err) {
         handleApiError(err)
@@ -256,16 +263,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     socket.addEventListener("message", listener)
-    set({ socketSubscribed: true, _socketListener: listener })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(get() as any)._socketListener = listener
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(get() as any).socketSubscribed = true
   },
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket
-    const listener = get()._socketListener
-    if (socket && listener) socket.removeEventListener("message", listener)
-    set({ socketSubscribed: false, _socketListener: undefined })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const listener = (get() as any)._socketListener
+    if (listener && socket) {
+      socket.removeEventListener("message", listener)
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(get() as any)._socketListener = undefined
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(get() as any).socketSubscribed = false
   },
-
   connectSocket: () => {
     const { socketConnected } = get()
     const authUser = useAuthStore.getState().authUser

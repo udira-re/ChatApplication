@@ -3,9 +3,7 @@ import { useEffect, useState, useRef } from "react"
 import toast from "react-hot-toast"
 
 import { getAllUser, getAllFriends } from "../api/friends"
-import ChatContainer from "../component/ChatContainer"
 import { useAuthStore } from "../store/store"
-import { useChatStore } from "../store/use_chat_store"
 import { handleApiError } from "../utillis/handle-api-error"
 
 type UserType = {
@@ -29,7 +27,6 @@ type Friend = {
 const FriendListPage: React.FC = () => {
   const authStore = useAuthStore()
   const authUser = authStore.authUser
-  const chatStore = useChatStore()
 
   const [activeTab, setActiveTab] = useState<"all" | "friends" | "requests">("all")
   const [allUsers, setAllUsers] = useState<UserType[]>([])
@@ -115,14 +112,14 @@ const FriendListPage: React.FC = () => {
   }
 
   // Open chat with friend
-  const handleMessageClick = (friend: Friend) => {
-    chatStore.setSelectedUser({
-      _id: friend._id,
-      fullName: friend.fullName,
-      email: friend.email || "",
-      username: friend.userName,
-    })
-  }
+  // const handleMessageClick = (friend: Friend) => {
+  //   chatStore.setSelectedUser({
+  //     _id: friend._id,
+  //     fullName: friend.fullName,
+  //     email: friend.email || "",
+  //     username: friend.userName,
+  //   })
+  // }
 
   if (loading)
     return (
@@ -203,12 +200,12 @@ const FriendListPage: React.FC = () => {
                       <div className="font-medium">{f.fullName}</div>
                       <div className="text-sm text-gray-500">{f.email}</div>
                     </div>
-                    <button
-                      onClick={() => handleMessageClick(f)}
+                    {/* <button
+                      onClick={() => handleMessageClick()}
                       className="px-3 py-1 bg-purple-500 text-white rounded-md hover:bg-purple-600 cursor-pointer"
                     >
                       Message
-                    </button>
+                    </button> */}
                   </li>
                 ))
             ) : (
@@ -273,7 +270,6 @@ const FriendListPage: React.FC = () => {
       </div>
 
       {/* ChatContainer */}
-      {chatStore.selectedUser && <ChatContainer />}
     </div>
   )
 }
