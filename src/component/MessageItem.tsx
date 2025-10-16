@@ -12,16 +12,7 @@ export default function MessageItem({ message }: Props) {
   const authUser = useAuthStore.getState().authUser
   const isMe = message.sender === authUser?._id
   const senderAvatar = isMe ? authUser?.avatar || "/avatar.png" : message.avatar || "/avatar.png"
-  // Debug console
-  // console.log("---- MessageItem ----")
-  // console.log("Message ID:", message.id)
-  // console.log("Message sender:", message.sender)
-  // console.log("Message receiver:", message.receiver)
-  // console.log("Message text:", message.text)
-  // console.log("Auth user ID:", authUser?._id)
-  // console.log("isMe:", isMe)
-  // console.log("Avatar used:", message.avatar)
-  // console.log("--------------------")
+
   return (
     <div className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
       {/* Left avatar for received messages */}

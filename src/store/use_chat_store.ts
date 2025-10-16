@@ -223,7 +223,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         sender: m.sender,
         receiver: m.receiver,
         text: m.text,
-        fileUrl: m.fileUrl,
+        fileUrl: m.fileUrl || "",
         fileName: m.fileName,
         createdAt: m.createdAt,
         status: "delivered",
