@@ -48,7 +48,11 @@ export type IMessage = {
 }
 
 //
-
+//
+export type ISendMessageResponse = {
+  success: boolean
+  message: IMessage
+}
 //
 export type IMessageResponse = {
   success: boolean
@@ -78,7 +82,7 @@ export const sendMessage = async (
   receiverId: string,
   text?: string,
   file?: File
-): Promise<IMessageResponse> => {
+): Promise<IMessage> => {
   if (!receiverId) throw new Error("receiverId is missing")
 
   const formData = new FormData()
@@ -89,16 +93,11 @@ export const sendMessage = async (
     formData.append("file", file)
   }
 
-  const res = await api.post<{ success: boolean; message: IMessageResponse }>(
-    "/api/messages",
-    formData
-  )
+  const res = await api.post<ISendMessageResponse>("/api/messages", formData)
 
-  if (!res.data?.success) {
+  if (!res.data.success || !res.data.message) {
     throw new Error("Failed to send message")
   }
-
-  return res.data.message
 
   return res.data.message
 }

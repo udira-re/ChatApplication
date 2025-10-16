@@ -143,7 +143,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const profile = useAuthStore.getState().profile
     const selectedUser = get().selectedUser
 
-    // Use _id from selectedUser (your receiver)
     const finalReceiverId =
       receiverId ||
       (selectedUser ? ("id" in selectedUser ? selectedUser.id : undefined) : undefined)
@@ -168,19 +167,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ messages: [...get().messages, tempMessage] })
 
     try {
-      const res = await apiSendMessage(finalReceiverId, text, file)
-
-      if (!res?.success || !res?.messages) throw new Error("Message not returned from API")
-
-      const msg = res.messages[0]
+      const msg = await apiSendMessage(finalReceiverId, text, file) // ✅ returns IMessage
 
       const newMsg: Message = {
         id: msg._id,
         senderId: msg.senderId,
         receiverId: msg.receiverId,
         text: msg.text,
-        fileUrl: msg.fileUrl,
-        fileName: msg.fileName,
+        fileUrl: msg.fileUrl, // optional
+        fileName: msg.fileName, // optional
         createdAt: msg.createdAt,
         status: "delivered",
         avatar: profile?.avatar,
