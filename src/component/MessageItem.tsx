@@ -10,17 +10,21 @@ type Props = {
 
 export default function MessageItem({ message }: Props) {
   const authUser = useAuthStore.getState().authUser
-  const isMe = message.sender === authUser?._id
+  const isMe = message.sender === authUser?._id // ✅ always compare senderId
   const senderAvatar = isMe ? authUser?.avatar || "/avatar.png" : message.avatar || "/avatar.png"
 
   return (
     <div className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
-      {/* Left avatar for received messages */}
+      {/* Receiver avatar (left side) */}
       {!isMe && (
         <img
-          src={senderAvatar ? `${import.meta.env.VITE_API_BASE_URL}${senderAvatar}` : "profile"}
+          src={
+            senderAvatar.startsWith("http")
+              ? senderAvatar
+              : `${import.meta.env.VITE_API_BASE_URL}${senderAvatar}`
+          }
           alt="avatar"
-          className="w-8 h-8 rounded-full"
+          className="w-8 h-8 rounded-full object-cover"
         />
       )}
 
@@ -49,17 +53,16 @@ export default function MessageItem({ message }: Props) {
         </div>
       </div>
 
-      {/* Right avatar for sent messages */}
+      {/* Sender avatar (right side) */}
       {isMe && (
-        // <img
-        //   src={authUser?.avatar || "/avatar.png"}
-        //   alt="avatar"
-        //   className="w-10 h-10 rounded-full object-cover border"
-        // />
         <img
-          src={authUser?.avatar ? `${import.meta.env.VITE_API_BASE_URL}${senderAvatar}` : "profile"}
+          src={
+            senderAvatar.startsWith("http")
+              ? senderAvatar
+              : `${import.meta.env.VITE_API_BASE_URL}${senderAvatar}`
+          }
           alt="avatar"
-          className="w-10 h-10 rounded-full object-cover border"
+          className="w-8 h-8 rounded-full object-cover border"
         />
       )}
     </div>

@@ -1,4 +1,4 @@
-import { Image, Send, X, Smile } from "lucide-react"
+import { Image, Send, X, Smile, Loader } from "lucide-react"
 import React, { useRef, useState, lazy, Suspense, type ChangeEvent, type FormEvent } from "react"
 import toast from "react-hot-toast"
 
@@ -140,7 +140,13 @@ const MessageInput: React.FC = () => {
 
           {/* Emoji picker */}
           {showEmojiPicker && (
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense
+              fallback={
+                <div>
+                  <Loader />
+                </div>
+              }
+            >
               <div className="absolute bottom-12 right-0 z-50">
                 <EmojiPicker onEmojiClick={handleEmojiClick} />
               </div>

@@ -75,7 +75,17 @@ const Profile: React.FC = () => {
   const { handleSubmit, reset, register, setValue, formState } = methods
   const { errors, isDirty } = formState
 
-  // Load profile once
+  // ✅ Helper to build correct avatar URL
+  const getAvatarUrl = (avatarPath?: string | null): string | null => {
+    if (!avatarPath) return null
+    if (avatarPath.startsWith("http")) return avatarPath
+
+    const base = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || ""
+    const cleanPath = avatarPath.replace(/^\/+/, "")
+    return `${base}/${cleanPath}`
+  }
+
+  // ✅ Load profile once
   useEffect(() => {
     if (!authUser || profileFetched.current) return
     profileFetched.current = true
@@ -95,13 +105,7 @@ const Profile: React.FC = () => {
           avatar: undefined,
         })
 
-        // Set preview image with full URL if avatar exists
-        if (data.profile.avatar) {
-          const url = `${import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "")}/${data.profile.avatar.replace(/^\/+/, "")}`
-          setPreviewImage(url)
-        } else {
-          setPreviewImage(null)
-        }
+        setPreviewImage(getAvatarUrl(data.profile.avatar))
       } catch (err) {
         handleApiError(err)
       }
@@ -110,18 +114,18 @@ const Profile: React.FC = () => {
     loadProfile()
   }, [authUser, fetchProfile, reset])
 
-  // Cleanup blob URLs
+  // ✅ Cleanup blob URLs
   useEffect(() => {
     return () => {
       if (previewImage?.startsWith("blob:")) URL.revokeObjectURL(previewImage)
     }
   }, [previewImage])
 
+  // ✅ Handle image change preview
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Revoke old blob URL if any
     if (previewImage?.startsWith("blob:")) URL.revokeObjectURL(previewImage)
 
     const objectUrl = URL.createObjectURL(file)
@@ -129,6 +133,7 @@ const Profile: React.FC = () => {
     setValue("avatar", file, { shouldDirty: true })
   }
 
+  // ✅ Submit handler
   const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
     if (isUpdatingProfile) return
 
@@ -153,15 +158,12 @@ const Profile: React.FC = () => {
           email: user.email ?? "",
           phone: profile.phone ?? "",
           bio: profile.bio ?? "",
-          avatar: undefined, // undefined keeps isDirty correct
+          avatar: undefined,
         },
-        { keepValues: true } // keep preview & dirty state
+        { keepValues: true }
       )
 
-      if (profile.avatar) {
-        const url = `${import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "")}/${profile.avatar.replace(/^\/+/, "")}`
-        setPreviewImage(url)
-      }
+      setPreviewImage(getAvatarUrl(profile.avatar))
 
       toast.success("Profile updated successfully!")
     } catch (err) {

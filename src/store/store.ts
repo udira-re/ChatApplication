@@ -364,6 +364,7 @@ import {
 } from "../api/friends"
 import { updateProfile as apiUpdateProfile, type UpdateProfileResponse } from "../api/profile"
 import { handleApiError } from "../utillis/handle-api-error"
+import { useChatStore } from "./use_chat_store"
 
 // Types
 export type AuthUser = {
@@ -683,10 +684,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     newSocket.on("connect", () => {
       set({ socketConnected: true, socket: newSocket })
       toast.success("✅ Socket.IO connected")
+      // Automatically subscribe if a chat is selected
+      const selectedUser = useChatStore.getState().selectedUser
+      if (selectedUser) {
+        useChatStore.getState().subscribeToMessages()
+      }
     })
 
     newSocket.on("disconnect", (reason) => {
       set({ socketConnected: false, socket: null, onlineUsers: [] })
+      useChatStore.setState({ socketSubscribed: false, _socketListener: undefined })
+
       toast("⚠️ Socket.IO disconnected")
       // console.log("Socket disconnected:", reason)
     })
