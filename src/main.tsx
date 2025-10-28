@@ -1,4 +1,4 @@
-import { StrictMode } from "react"
+// import { StrictMode } from "react"
 // main.tsx
 import { createRoot } from "react-dom/client"
 import { Toaster } from "react-hot-toast"
@@ -8,7 +8,8 @@ import "./index.css"
 import { router } from "./routes"
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
+  // <StrictMode>
+  <>
     <RouterProvider router={router} />
     <Toaster
       position="top-right"
@@ -18,5 +19,6 @@ createRoot(document.getElementById("root")!).render(
         style: { fontSize: "14px" },
       }}
     />
-  </StrictMode>
+  </>
+  //
 )

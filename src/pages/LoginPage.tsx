@@ -75,7 +75,6 @@ export default function LoginPage() {
               {isLogging ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  Loading...
                 </>
               ) : (
                 "Sign in"
