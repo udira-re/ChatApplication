@@ -18,9 +18,9 @@ export default function MessageItem({ message }: Props) {
       {/* Left avatar for received messages */}
       {!isMe && (
         <img
-          src={senderAvatar}
+          src={senderAvatar ? `${import.meta.env.VITE_API_BASE_URL}${senderAvatar}` : "profile"}
           alt="avatar"
-          className="w-10 h-10 rounded-full object-cover border"
+          className="w-8 h-8 rounded-full"
         />
       )}
 
@@ -34,7 +34,11 @@ export default function MessageItem({ message }: Props) {
 
         {message.fileUrl && (
           <img
-            src={message.fileUrl}
+            src={
+              message.fileUrl.startsWith("http")
+                ? message.fileUrl
+                : `${import.meta.env.VITE_API_BASE_URL}${message.fileUrl}`
+            }
             alt={message.fileName || "file"}
             className="rounded-md mt-1 max-w-[200px] object-cover"
           />
@@ -47,8 +51,13 @@ export default function MessageItem({ message }: Props) {
 
       {/* Right avatar for sent messages */}
       {isMe && (
+        // <img
+        //   src={authUser?.avatar || "/avatar.png"}
+        //   alt="avatar"
+        //   className="w-10 h-10 rounded-full object-cover border"
+        // />
         <img
-          src={authUser?.avatar || "/avatar.png"}
+          src={authUser?.avatar ? `${import.meta.env.VITE_API_BASE_URL}${senderAvatar}` : "profile"}
           alt="avatar"
           className="w-10 h-10 rounded-full object-cover border"
         />

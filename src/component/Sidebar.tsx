@@ -83,7 +83,7 @@ const Sidebar = () => {
           >
             <div className="relative mx-auto lg:mx-0">
               <img
-                src={user.avatar || "/avatar.png"}
+                src={user?.avatar ? `${import.meta.env.VITE_API_BASE_URL}${user.avatar}` : ""}
                 alt={user.name}
                 className="size-12 object-cover rounded-full"
               />

@@ -17,7 +17,15 @@ const ChatHeader: React.FC = () => {
           {/* Avatar */}
           <div className="avatar">
             <div className="size-10 rounded-full relative">
-              <img src={selectedUser.avatar || "/avatar.png"} alt={selectedUser.name} />
+              <img
+                src={
+                  selectedUser?.avatar
+                    ? `${import.meta.env.VITE_API_BASE_URL}${selectedUser.avatar}`
+                    : "profile"
+                }
+                alt={selectedUser?.fullName}
+                className="w-8 h-8 rounded-full"
+              />
             </div>
           </div>
 

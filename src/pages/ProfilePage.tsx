@@ -92,13 +92,16 @@ const Profile: React.FC = () => {
           phone: data.profile.phone ?? "",
           bio: data.profile.bio ?? "",
           notifications: data.user.notifications ?? true,
-          avatar: null,
+          avatar: undefined,
         })
 
         // Set preview image with full URL if avatar exists
-        setPreviewImage(
-          data.profile.avatar ? `${import.meta.env.VITE_API_BASE_URL}${data.profile.avatar}` : null
-        )
+        if (data.profile.avatar) {
+          const url = `${import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "")}/${data.profile.avatar.replace(/^\/+/, "")}`
+          setPreviewImage(url)
+        } else {
+          setPreviewImage(null)
+        }
       } catch (err) {
         handleApiError(err)
       }
@@ -143,19 +146,22 @@ const Profile: React.FC = () => {
 
       const { user, profile } = updatedProfile
 
-      reset({
-        username: user.username ?? "",
-        fullName: user.fullName ?? "",
-        email: user.email ?? "",
-        phone: profile.phone ?? "",
-        bio: profile.bio ?? "",
-        avatar: null,
-      })
-
-      // Set preview image to the updated avatar from server
-      setPreviewImage(
-        profile.avatar ? `${import.meta.env.VITE_API_BASE_URL}${profile.avatar}` : null
+      reset(
+        {
+          username: user.username ?? "",
+          fullName: user.fullName ?? "",
+          email: user.email ?? "",
+          phone: profile.phone ?? "",
+          bio: profile.bio ?? "",
+          avatar: undefined, // undefined keeps isDirty correct
+        },
+        { keepValues: true } // keep preview & dirty state
       )
+
+      if (profile.avatar) {
+        const url = `${import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "")}/${profile.avatar.replace(/^\/+/, "")}`
+        setPreviewImage(url)
+      }
 
       toast.success("Profile updated successfully!")
     } catch (err) {

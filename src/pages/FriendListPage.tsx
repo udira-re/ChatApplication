@@ -24,6 +24,8 @@ type Friend = {
   fullName: string
   email: string
   userName: string
+  avatar: string
+  lastMessage: string
 }
 
 const FriendListPage: React.FC = () => {
@@ -36,7 +38,6 @@ const FriendListPage: React.FC = () => {
   const [friends, setFriends] = useState<Friend[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Ref to prevent double fetch in Strict Mode
   const hasFetched = useRef(false)
 
   const fetchData = async () => {
@@ -46,6 +47,7 @@ const FriendListPage: React.FC = () => {
 
       let users: UserType[] = usersRes.users || []
 
+      // Add unknown users for pending requests
       const requestUserIds: string[] = authStore.profile?.friendRequestsReceived || []
       const missingUsers: UserType[] = requestUserIds
         .filter((id) => !users.find((u) => u.user._id === id))
@@ -80,7 +82,7 @@ const FriendListPage: React.FC = () => {
     init()
   }, [])
 
-  // Send friend request
+  // Friend actions
   const handleSendRequest = async (receiverId: string) => {
     if (!authUser) return
     try {
@@ -94,40 +96,51 @@ const FriendListPage: React.FC = () => {
     }
   }
 
-  // Accept request
   const handleAccept = async (userId: string) => {
     try {
       await authStore.acceptRequest(userId)
       await authStore.fetchProfile()
+      await fetchData()
     } catch (err) {
       handleApiError(err)
     }
   }
 
-  // Reject request
   const handleReject = async (userId: string) => {
     try {
       await authStore.rejectRequest(userId)
       await authStore.fetchProfile()
+      await fetchData()
     } catch (err) {
       handleApiError(err)
     }
   }
 
-  // Open chat with friend
   const handleMessageClick = (friend: Friend) => {
+    const user = allUsers.find((u) => u.user._id === friend._id)
+
     chatStore.setSelectedUser({
       _id: friend._id,
-      fullName: friend.fullName,
+      name: friend.fullName,
       email: friend.email || "",
       username: friend.userName,
+      avatar: user?.avatar ? `${import.meta.env.VITE_API_BASE_URL}${user.avatar}` : "",
     })
+
+    // Fetch messages immediately
+    chatStore.getMessages(friend._id)
+  }
+
+  // Change tab and close chat
+  const handleTabChange = (tab: "all" | "friends" | "requests") => {
+    setActiveTab(tab)
+    chatStore.setSelectedUser(null) // chat closes unless clicked
   }
 
   if (loading)
     return (
-      <div className="p-4 justify-center">
-        <LoaderCircleIcon />{" "}
+      <div className="p-4 flex justify-center items-center">
+        <LoaderCircleIcon className="animate-spin w-6 h-6" />
       </div>
     )
 
@@ -139,7 +152,7 @@ const FriendListPage: React.FC = () => {
           {(["all", "friends", "requests"] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabChange(tab)}
               className={`pb-2 ${
                 activeTab === tab ? "border-b-2 border-blue-500 font-semibold" : "text-gray-500"
               }`}
@@ -163,15 +176,17 @@ const FriendListPage: React.FC = () => {
                     key={`user-${u.user._id}`}
                     className="border p-3 rounded-md flex justify-between items-center hover:bg-gray-100"
                   >
-                    <div>
+                    <div className="flex items-center gap-2">
                       <img
                         src={
                           u.avatar ? `${import.meta.env.VITE_API_BASE_URL}${u.avatar}` : "profile"
                         }
                         alt={u.user.fullName}
-                        className="w-8 h-8 rounded-full mr-2 inline-block"
+                        className="w-8 h-8 rounded-full"
                       />
-                      {u.user.fullName} ({u.user.email})
+                      <span>
+                        {u.user.fullName} ({u.user.email})
+                      </span>
                     </div>
                     {!isFriend && (
                       <button
@@ -236,17 +251,19 @@ const FriendListPage: React.FC = () => {
                       key={`request-${displayUser.user._id}`}
                       className="border p-3 rounded-md flex justify-between items-center hover:bg-gray-100"
                     >
-                      <div>
+                      <div className="flex items-center gap-2">
                         <img
                           src={
                             displayUser.avatar
                               ? `${import.meta.env.VITE_API_BASE_URL}${displayUser.avatar}`
-                              : ""
+                              : "profile"
                           }
                           alt={displayUser.user.fullName}
-                          className="w-8 h-8 rounded-full mr-2 inline-block"
+                          className="w-8 h-8 rounded-full"
                         />
-                        {displayUser.user.fullName} ({displayUser.user.email})
+                        <span>
+                          {displayUser.user.fullName} ({displayUser.user.email})
+                        </span>
                       </div>
                       <div className="flex gap-2">
                         <button
@@ -273,7 +290,11 @@ const FriendListPage: React.FC = () => {
       </div>
 
       {/* ChatContainer */}
-      {chatStore.selectedUser && <ChatContainer />}
+      {activeTab === "friends" && chatStore.selectedUser && (
+        <div className="w-1/3 h-[600px] border-l flex flex-col">
+          <ChatContainer />
+        </div>
+      )}
     </div>
   )
 }
