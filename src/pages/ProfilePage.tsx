@@ -60,7 +60,7 @@ const Profile: React.FC = () => {
   const profileFetched = useRef(false)
 
   const methods = useForm<ProfileFormValues>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver<ProfileFormValues>(schema),
     defaultValues: {
       username: "",
       fullName: "",
@@ -75,7 +75,6 @@ const Profile: React.FC = () => {
   const { handleSubmit, reset, register, setValue, formState } = methods
   const { errors, isDirty } = formState
 
-  // ✅ Helper to build correct avatar URL
   const getAvatarUrl = (avatarPath?: string | null): string | null => {
     if (!avatarPath) return null
     if (avatarPath.startsWith("http")) return avatarPath
@@ -85,7 +84,7 @@ const Profile: React.FC = () => {
     return `${base}/${cleanPath}`
   }
 
-  // ✅ Load profile once
+  // Load profile once
   useEffect(() => {
     if (!authUser || profileFetched.current) return
     profileFetched.current = true
@@ -102,7 +101,7 @@ const Profile: React.FC = () => {
           phone: data.profile.phone ?? "",
           bio: data.profile.bio ?? "",
           notifications: data.user.notifications ?? true,
-          avatar: undefined,
+          avatar: null,
         })
 
         setPreviewImage(getAvatarUrl(data.profile.avatar))
@@ -114,14 +113,13 @@ const Profile: React.FC = () => {
     loadProfile()
   }, [authUser, fetchProfile, reset])
 
-  // ✅ Cleanup blob URLs
+  // Cleanup blob URLs
   useEffect(() => {
     return () => {
       if (previewImage?.startsWith("blob:")) URL.revokeObjectURL(previewImage)
     }
   }, [previewImage])
 
-  // ✅ Handle image change preview
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -133,17 +131,16 @@ const Profile: React.FC = () => {
     setValue("avatar", file, { shouldDirty: true })
   }
 
-  // ✅ Submit handler
   const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
     if (isUpdatingProfile) return
 
     try {
       const formData = new FormData()
-      formData.append("username", data.username)
-      formData.append("fullName", data.fullName)
-      formData.append("email", data.email)
-      formData.append("phone", data.phone)
-      formData.append("bio", data.bio)
+      if (data.username) formData.append("username", data.username)
+      if (data.fullName) formData.append("fullName", data.fullName)
+      if (data.email) formData.append("email", data.email)
+      if (data.phone) formData.append("phone", data.phone)
+      if (data.bio) formData.append("bio", data.bio)
       if (data.avatar) formData.append("avatar", data.avatar)
 
       const updatedProfile = await updateProfile(formData)
@@ -158,13 +155,12 @@ const Profile: React.FC = () => {
           email: user.email ?? "",
           phone: profile.phone ?? "",
           bio: profile.bio ?? "",
-          avatar: undefined,
+          avatar: null,
         },
         { keepValues: true }
       )
 
       setPreviewImage(getAvatarUrl(profile.avatar))
-
       toast.success("Profile updated successfully!")
     } catch (err) {
       handleApiError(err)
@@ -231,6 +227,7 @@ const Profile: React.FC = () => {
                 </label>
                 <textarea
                   {...register("bio")}
+                  defaultValue=""
                   className="textarea textarea-bordered w-full resize-none bg-gray-400 pl-2 text-sm placeholder:text-gray-400 border-white"
                   rows={4}
                   placeholder="Write something about yourself"
