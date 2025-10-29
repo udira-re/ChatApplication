@@ -17,24 +17,16 @@ import { useAuthStore } from "./store"
 
 export type MessageStatus = "sent" | "delivered" | "read" | "failed"
 
-// export type Message = {
-//   id: string
-//   senderId: string
-//   receiverId: string
-//   text?: string
-//   fileUrl?: string
-//   fileName?: string
-//   createdAt: string
-//   status: MessageStatus
-//   avatar?: string
-// }
-
 export type Message = {
   _id: string
-  text: string
+  text?: string
   sender: string
   receiver: string
   createdAt: string
+  fileUrl?: string
+  fileName?: string
+  status?: MessageStatus
+  avatar?: string
 }
 
 type ChatState = {
@@ -78,9 +70,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }))
   },
 
-  // ✅ Get user list
   getUsers: async () => {
-    // console.log("🟢 getUsers called")
     set({ isUsersLoading: true })
     try {
       const data = await getUsersAPI()
@@ -101,7 +91,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       })
 
       set({ users: formatted })
-      // console.log("✅ Users loaded:", formatted)
     } catch (err) {
       handleApiError(err)
     } finally {
@@ -109,13 +98,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  // ✅ Get friends list
   getFriends: async () => {
-    // console.log("🟢 getFriends called")
     set({ isUsersLoading: true })
     try {
       const res = await getAllFriends()
       const friendsArray = Array.isArray(res?.data) ? res.data : res.data ? [res.data] : []
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const formatted = friendsArray.map((f: any) => ({
         _id: f.id,
@@ -124,7 +112,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         chatId: "",
       }))
       set({ users: formatted })
-      // console.log("✅ Friends loaded:", formatted)
     } catch (err) {
       handleApiError(err)
     } finally {
@@ -132,88 +119,78 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  // ✅ When selecting a user to chat with
   setSelectedUser: (user) => {
-    // console.log("👤 setSelectedUser called with:", user)
     set({ selectedUser: user, messages: [] })
     if (!user) return
 
     const _id = "id" in user ? user.id : user._id
-    if (!_id) {
-      // console.log("❌ No user ID found")
-      return
-    }
+    if (!_id) return
 
     const { socketConnected } = useAuthStore.getState()
     if (!socketConnected) {
-      // console.log("⚠️ Socket not connected → connecting first")
       useAuthStore.getState().connectSocket()
     } else {
-      // console.log("⚡ Socket already connected → subscribing now")
       get().subscribeToMessages()
     }
 
     get().getMessages(_id)
   },
 
-  sendMessage: async ({ text, file, receiverId }) => {
-    // console.log("📤 sendMessage called with:", { text, file, receiverId })
+  sendMessage: async ({ text, file, receiverId }): Promise<void> => {
     const authUser = useAuthStore.getState().authUser
     const profile = useAuthStore.getState().profile
     const selectedUser = get().selectedUser
-    // const socket = useAuthStore.getState().socket
 
     const finalReceiverId =
       receiverId ||
       (selectedUser ? ("id" in selectedUser ? selectedUser.id : selectedUser._id) : undefined)
-    if (!authUser || !finalReceiverId) return toast.error("No user selected or not authenticated")
 
-    // console.log(finalReceiverId, "this is the receiver")
+    if (!authUser || !finalReceiverId) {
+      toast.error("No user selected or not authenticated")
+      return // <-- just return void, not string
+    }
 
     const tempId = Date.now().toString()
     const tempMessage: Message = {
-      id: tempId,
-      senderId: authUser._id,
-      receiverId: finalReceiverId,
+      _id: tempId,
+      sender: authUser._id,
+      receiver: finalReceiverId,
       text,
       fileUrl: file ? URL.createObjectURL(file) : undefined,
       createdAt: new Date().toISOString(),
       status: "sent",
       avatar: profile?.avatar,
     }
-    // console.log(tempMessage, "this is temp message obj")
 
     set({ messages: [...get().messages, tempMessage] })
-    // console.log("🕐 Temporary message added:", tempMessage)
 
     try {
       const msg = await apiSendMessage(finalReceiverId, text, file)
-      // console.log("✅ Message sent via API:", msg)
-
       const newMsg: Message = {
-        id: msg._id,
-        senderId: msg.sender,
-        receiverId: msg.receiver,
+        _id: msg._id,
+        sender: msg.sender,
+        receiver: msg.receiver,
         text: msg.text,
         fileUrl: msg.fileUrl,
         fileName: msg.fileName,
         createdAt: msg.createdAt,
         status: "delivered",
-        avatar: msg.senderId === authUser._id ? profile?.avatar : selectedUser?.avatar,
+        avatar: msg.sender === authUser._id ? profile?.avatar : selectedUser?.avatar,
       }
-      // console.log(newMsg, "this is the new message")
 
-      set({ messages: get().messages.map((m) => (m.id === tempId ? newMsg : m)) })
+      set({
+        messages: get().messages.map((m) => (m._id === tempId ? newMsg : m)),
+      })
     } catch (err) {
       set({
-        messages: get().messages.map((m) => (m.id === tempId ? { ...m, status: "failed" } : m)),
+        messages: get().messages.map((m) =>
+          m._id === tempId ? { ...m, status: "failed" as MessageStatus } : m
+        ),
       })
       handleApiError(err)
     }
   },
-  // ✅ Fetch messages for selected chat
   getMessages: async (chatId: string) => {
-    // console.log("🟢 getMessages called for chat:", chatId)
     set({ isMessagesLoading: true })
     try {
       const authUserId = useAuthStore.getState().authUser?._id
@@ -224,11 +201,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const messages: Message[] = data.messages.messages.map((m: any) => ({
-        id: m._id,
+        _id: m._id,
         sender: m.sender,
         receiver: m.receiver,
         text: m.text,
-        fileUrl: m.fileUrl || "",
+        fileUrl: m.fileUrl || undefined,
         fileName: m.fileName,
         createdAt: m.createdAt,
         status: "delivered",
@@ -238,7 +215,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
             : data.messages.users?.other?.avatar || "/avatar.png",
       }))
 
-      // console.log("✅ Messages loaded:", messages)
       set({ messages })
     } catch (err) {
       handleApiError(err)
@@ -248,12 +224,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   connectSocket: () => {
-    // console.log("🌐 Redirecting to authStore.connectSocket()")
     useAuthStore.getState().connectSocket()
   },
-  // ✅ Disconnect socket
+
   disconnectSocket: () => {
-    // console.log("🛑 disconnectSocket called")
     const { socket } = get()
     if (socket) socket.disconnect()
     set({
@@ -262,44 +236,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
       socketSubscribed: false,
       _socketListener: undefined,
     })
-    // console.log("🧹 Socket cleanup done")
   },
+
   subscribeToMessages: () => {
     const socket = useAuthStore.getState().socket
     if (!socket) return
 
-    // const listener = (message: Message) => {
-    //   console.log("📩 Incoming real-time message:", message)
-
-    //   const active = get().selectedUser
-    //   if (!active) {
-    //     console.log("⚠️ No active user selected — message ignored")
-    //     return
-    //   }
-
-    //   const activeId = "_id" in active ? active._id : active.id
-    //   console.log("👤 Active user ID:", activeId)
-    //   console.log("📨 Message sender:", message.sender)
-    //   console.log("📥 Message receiver:", message.receiver)
-
-    //   if (message.sender === activeId || message.receiver === activeId) {
-    //     console.log("✅ Message belongs to active chat — adding to store")
-    //     get().addMessage(message)
-    //   } else {
-    //     console.log("🚫 Message not for active chat — ignored")
-    //   }
-    // }
     const listener = (message: Message) => {
       const active = get().selectedUser
       if (!active) return
 
       const activeId = "_id" in active ? active._id : active.id
-
-      // ✅ Avoid duplicates
       const exists = get().messages.find((m) => m._id === message._id)
       if (exists) return
 
-      // Only add messages for active chat
       if (message.sender === activeId || message.receiver === activeId) {
         get().addMessage(message)
       }
