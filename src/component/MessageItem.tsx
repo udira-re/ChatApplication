@@ -1,17 +1,27 @@
 // MessageItem.tsx
-import type { IMessage } from "../api/message"
-
 import { useAuthStore } from "../store/store"
-import { formatMessageTime } from "../utillis/utils"
+
+export type Message = {
+  _id: string
+  sender: string
+  receiver: string
+  text?: string
+  fileUrl?: string
+  fileName?: string
+  createdAt: string
+  status?: "sent" | "delivered" | "read" | "failed"
+  avatar?: string
+}
 
 type Props = {
-  message: IMessage & { avatar?: string; fileName?: string }
+  message: Message
+  authUserId: string
 }
 
 export default function MessageItem({ message }: Props) {
-  const authUser = useAuthStore.getState().authUser
-  const isMe = message.sender === authUser?._id // ✅ always compare senderId
-  const senderAvatar = isMe ? authUser?.avatar || "/avatar.png" : message.avatar || "/avatar.png"
+  const authUser = useAuthStore.getState().authUser?._id
+  const isMe = message.sender === authUser
+  const senderAvatar = message.avatar || "/avatar.png"
 
   return (
     <div className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
@@ -49,7 +59,14 @@ export default function MessageItem({ message }: Props) {
         )}
 
         <div className="flex justify-end items-center mt-1 gap-1 text-xs opacity-70">
-          <time>{formatMessageTime(new Date(message.createdAt))}</time>
+          {/* <time>{formatMessageTime(new Date(message.createdAt))}</time> */}
+          <time>
+            {new Date(message.createdAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </time>
+          {isMe && message.status && <span> • {message.status}</span>}
         </div>
       </div>
 
