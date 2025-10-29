@@ -683,7 +683,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     newSocket.on("connect", () => {
       set({ socketConnected: true, socket: newSocket })
-      toast.success("✅ Socket.IO connected")
+      // toast.success("✅ Socket.IO connected")
       // Automatically subscribe if a chat is selected
       const selectedUser = useChatStore.getState().selectedUser
       if (selectedUser) {
@@ -695,13 +695,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ socketConnected: false, socket: null, onlineUsers: [] })
       useChatStore.setState({ socketSubscribed: false, _socketListener: undefined })
 
-      toast("⚠️ Socket.IO disconnected")
+      // toast("⚠️ Socket.IO disconnected")
       // console.log("Socket disconnected:", reason)
     })
 
     newSocket.on("connect_error", (error) => {
       set({ socketConnected: false, socket: null })
-      toast.error("❌ Socket.IO connection error")
+      // toast.error("❌ Socket.IO connection error")
       // console.error("Socket connection error:", error)
     })
 
