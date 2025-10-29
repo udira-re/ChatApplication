@@ -17,16 +17,24 @@ import { useAuthStore } from "./store"
 
 export type MessageStatus = "sent" | "delivered" | "read" | "failed"
 
+// export type Message = {
+//   id: string
+//   senderId: string
+//   receiverId: string
+//   text?: string
+//   fileUrl?: string
+//   fileName?: string
+//   createdAt: string
+//   status: MessageStatus
+//   avatar?: string
+// }
+
 export type Message = {
-  id: string
-  senderId: string
-  receiverId: string
-  text?: string
-  fileUrl?: string
-  fileName?: string
+  _id: string
+  text: string
+  sender: string
+  receiver: string
   createdAt: string
-  status: MessageStatus
-  avatar?: string
 }
 
 type ChatState = {
@@ -50,6 +58,7 @@ type ChatState = {
   unsubscribeFromMessages: () => void
   connectSocket: () => void
   disconnectSocket: () => void
+  addMessage: (message: Message) => void
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -62,6 +71,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
   socketConnected: false,
   socket: null,
   _socketListener: undefined,
+
+  addMessage: (message) => {
+    set((state) => ({
+      messages: [...state.messages, message],
+    }))
+  },
 
   // ✅ Get user list
   getUsers: async () => {
@@ -220,6 +235,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       (selectedUser ? ("id" in selectedUser ? selectedUser.id : selectedUser._id) : undefined)
     if (!authUser || !finalReceiverId) return toast.error("No user selected or not authenticated")
 
+    // console.log(finalReceiverId, "this is the receiver")
+
     const tempId = Date.now().toString()
     const tempMessage: Message = {
       id: tempId,
@@ -231,6 +248,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       status: "sent",
       avatar: profile?.avatar,
     }
+    // console.log(tempMessage, "this is temp message obj")
 
     set({ messages: [...get().messages, tempMessage] })
     // console.log("🕐 Temporary message added:", tempMessage)
@@ -241,8 +259,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       const newMsg: Message = {
         id: msg._id,
-        senderId: msg.senderId,
-        receiverId: msg.receiverId,
+        senderId: msg.sender,
+        receiverId: msg.receiver,
         text: msg.text,
         fileUrl: msg.fileUrl,
         fileName: msg.fileName,
@@ -250,15 +268,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
         status: "delivered",
         avatar: msg.senderId === authUser._id ? profile?.avatar : selectedUser?.avatar,
       }
+      // console.log(newMsg, "this is the new message")
 
       set({ messages: get().messages.map((m) => (m.id === tempId ? newMsg : m)) })
 
-      if (socket && socket.connected) {
-        // console.log("🚀 Emitting via socket:", newMsg)
-        socket.emit("chat:private", newMsg)
-      } else {
-        // console.warn("⚠️ Socket not connected, cannot emit message")
-      }
+      // if (socket && socket.connected) {
+      //   // console.log("🚀 Emitting via socket:", newMsg)
+      //   socket.emit("chat:private", newMsg)
+      // } else {
+      //   // console.warn("⚠️ Socket not connected, cannot emit message")
+      // }
     } catch (err) {
       set({
         messages: get().messages.map((m) => (m.id === tempId ? { ...m, status: "failed" } : m)),
@@ -304,41 +323,46 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   // ✅ Subscribe to real-time messages
 
-  subscribeToMessages: () => {
-    // console.log("📌 subscribeToMessages called")
-    const authSocket = useAuthStore.getState().socket
-    if (!authSocket) {
-      // console.warn("❌ No socket available to subscribe")
-      return
-    }
-    if (get().socketSubscribed) {
-      // console.log("ℹ️ Already subscribed")
-      return
-    }
+  // subscribeToMessages: () => {
+  //   // console.log("📌 subscribeToMessages called")
+  //   const authSocket = useAuthStore.getState().socket
+  //   if (!authSocket) {
+  //     // console.warn("❌ No socket available to subscribe")
+  //     return
+  //   }
+  //   if (get().socketSubscribed) {
+  //     // console.log("ℹ️ Already subscribed")
+  //     return
+  //   }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const listener = (msg: any) => {
-      // console.log("📩 Incoming socket message:", msg)
-      const selectedUser = get().selectedUser
-      if (!selectedUser) return
-      //  console.log("⚠️ No selected user, ignoring message")
+  //   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  //   const listener = (msg: any) => {
+  //     // console.log("📩 Incoming socket message:", msg)
+  //     const selectedUser = get().selectedUser
+  //     if (!selectedUser) return
+  //     //  console.log("⚠️ No selected user, ignoring message")
 
-      const selectedUserId = "id" in selectedUser ? selectedUser.id : selectedUser._id
-      if (
-        String(msg.senderId) === String(selectedUserId) ||
-        String(msg.receiverId) === String(selectedUserId)
-      ) {
-        // console.log("✅ Adding message to chat:", msg)
-        set({ messages: [...get().messages, msg] })
-      } else {
-        // console.log("⚠️ Message ignored (not for current chat)")
-      }
-    }
+  //     const selectedUserId = "id" in selectedUser ? selectedUser.id : selectedUser._id
+  //     if (
+  //       String(msg.senderId) === String(selectedUserId) ||
+  //       String(msg.receiverId) === String(selectedUserId)
+  //     ) {
+  //       // console.log("✅ Adding message to chat:", msg)
+  //       set({ messages: [...get().messages, msg] })
+  //     } else {
+  //       // console.log("⚠️ Message ignored (not for current chat)")
+  //     }
+  //   }
 
-    authSocket.on("chat:private", listener)
-    // console.log("🔔 Listener attached to 'chat:private'")
-    set({ _socketListener: listener, socketSubscribed: true })
-  },
+  //   console.log("🔔 Subscribing to socket:", authSocket?.id)
+  //   authSocket.on("chat:private", (msg) => {
+  //     console.log("📩 Incoming real-time message:", msg)
+  //   })
+
+  //   authSocket.on("chat:private", listener)
+  //   // console.log("🔔 Listener attached to 'chat:private'")
+  //   set({ _socketListener: listener, socketSubscribed: true })
+  // },
 
   // ✅ Connect socket
   // connectSocket: () => {
@@ -405,18 +429,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
     })
     // console.log("🧹 Socket cleanup done")
   },
+  subscribeToMessages: () => {
+    const socket = useAuthStore.getState().socket
+    if (!socket) return
+
+    const listener = (message: Message) => {
+      // console.log("📩 Incoming real-time message:", message)
+
+      const active = get().selectedUser
+      if (!active || message.sender === active.id || message.receiver === active.id) {
+        get().addMessage(message)
+      }
+    }
+
+    socket.off("chat:private")
+    socket.on("chat:private", listener)
+
+    set({ unsubscribeFromMessages: () => socket.off("chat:private", listener) })
+  },
+
+  unsubscribeFromMessages: () => {},
 
   // ✅ Unsubscribe
-  unsubscribeFromMessages: () => {
-    // console.log("📌 unsubscribeFromMessages called")
-    const authSocket = useAuthStore.getState().socket
-    const { _socketListener } = get()
-    if (authSocket && _socketListener) {
-      authSocket.off("chat:private", _socketListener)
-      // console.log("🛑 Listener removed")
-    } else {
-      // console.log("⚠️ No listener to remove")
-    }
-    set({ _socketListener: undefined, socketSubscribed: false })
-  },
+  // unsubscribeFromMessages: () => {
+  //   // console.log("📌 unsubscribeFromMessages called")
+  //   const authSocket = useAuthStore.getState().socket
+  //   const { _socketListener } = get()
+  //   if (authSocket && _socketListener) {
+  //     authSocket.off("chat:private", _socketListener)
+  //     // console.log("🛑 Listener removed")
+  //   } else {
+  //     // console.log("⚠️ No listener to remove")
+  //   }
+  //   set({ _socketListener: undefined, socketSubscribed: false })
+  // },
 }))
