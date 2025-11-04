@@ -1,8 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Users, Plus, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
 
+import { getAllFriends } from "../api/friends"
 import { createGroupAPI } from "../api/message"
 import { useAuthStore } from "../store/store"
 import { useChatStore } from "../store/use_chat_store"
@@ -37,7 +40,7 @@ const Sidebar: React.FC = () => {
   const [showOnlineOnly, setShowOnlineOnly] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [showGroupList, setShowGroupList] = useState(false)
-  const [friends] = useState<User[]>([]) // <-- friends list
+  const [friends, setFriends] = useState<User[]>([]) // <-- friends list
   const [selectedFriends, setSelectedFriends] = useState<string[]>([])
   const [groupName, setGroupName] = useState("")
   const [isCreating, setIsCreating] = useState(false)
@@ -48,6 +51,35 @@ const Sidebar: React.FC = () => {
   }, [getUsers])
 
   // ✅ Fetch all friends for group creation
+  // ✅ Fetch all friends for group creation
+  useEffect(() => {
+    if (!showGroupList) return
+
+    const fetchFriends = async () => {
+      try {
+        const res = await getAllFriends()
+
+        // Normalize response: could be array directly or { friends: [...] }
+        const friendsArray = Array.isArray(res)
+          ? res
+          : Array.isArray(res.friends)
+            ? res.friends
+            : []
+
+        setFriends(
+          friendsArray.map((f: any) => ({
+            _id: f._id || f.id,
+            name: f.fullName || f.name,
+            avatar: f.avatar,
+          }))
+        )
+      } catch (err) {
+        handleApiError(err)
+      }
+    }
+
+    fetchFriends()
+  }, [showGroupList])
 
   const mappedUsers: User[] = users.map((user) => ({
     _id: user.id,
