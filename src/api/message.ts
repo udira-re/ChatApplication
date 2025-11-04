@@ -55,6 +55,8 @@ export type ISendMessageResponse = {
 }
 //
 export type IMessageResponse = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  id: any
   success: boolean
   users: {
     me: IUserInfo
@@ -138,4 +140,27 @@ export const getUsersAPI = async (): Promise<GetUsersResponse> => {
     handleApiError(err)
     return { success: false, response: [] }
   }
+}
+
+/// Group Chat
+
+export const createGroupAPI = async (name: string, memberIds: string[]) => {
+  const response = await api.post("/api/groups", { name, memberIds })
+  return response.data
+}
+
+export const sendGroupMessageAPI = async (groupId: string, text?: string, file?: File) => {
+  const formData = new FormData()
+  formData.append("groupId", groupId)
+  if (text) formData.append("text", text)
+  if (file) formData.append("file", file)
+  const response = await api.post("/api/group/message", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  })
+  return response.data
+}
+
+export const getGroupMessagesAPI = async (groupId: string) => {
+  const response = await api.get(`/api/group/${groupId}/messages`)
+  return response.data
 }
